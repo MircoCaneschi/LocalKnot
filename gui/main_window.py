@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                                QPushButton, QGraphicsView, QGraphicsScene,
                                QSizePolicy)
-from gui.components.data_panel import DataPanelWidget
+from gui.components.data_panel.data_panel import DataPanelWidget
 
 
 class MainWindow(QMainWindow):
@@ -9,7 +9,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Knot Analyzer")
+        self.setWindowTitle("LocalKnot")
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
