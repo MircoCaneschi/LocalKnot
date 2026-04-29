@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGroupBox, QSizePolicy
 from gui.components import data_panel
-from gui.components.data_panel.projects import MainWidgetProjects
+from gui.components.data_panel.boards import BoardsGui
+from gui.components.data_panel.projects import ProjectsGui
 
 
 class DataPanelWidget(QWidget):
@@ -16,19 +17,19 @@ class DataPanelWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # 1. Projects Group
+        projects_gui = ProjectsGui()
         self.projects_group = QGroupBox("Projects")
-        self.projects_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.projects_group.setLayout(MainWidgetProjects().main_layout)
+        self.projects_group.setLayout(projects_gui.main_layout)
 
         # 2. Board Group
-        self.board_group = QGroupBox("Board")
-        self.board_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.board_group.setLayout(MainWidgetProjects().main_layout)
+        boards_gui = BoardsGui()
+        self.board_group = QGroupBox(f"Boards[{boards_gui.board_no}]")
+        self.board_group.setLayout(boards_gui.main_layout)
 
         # 3. Knots Group
+        knots_gui = ProjectsGui()#todo change in KnotsGui
         self.knots_group = QGroupBox("Knots")
-        self.knots_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.knots_group.setLayout(MainWidgetProjects().main_layout)
+        self.knots_group.setLayout(knots_gui.main_layout)
 
         layout.addWidget(self.projects_group, 1)
         layout.addWidget(self.board_group, 1)
@@ -48,16 +49,19 @@ class HiddenDataPanelWidget(QWidget):
             hidden_layout.setContentsMargins(0, 0, 0, 0)
 
             # 1. Projects Group
+            projects_gui = ProjectsGui()
             self.hidden_projects_group = QGroupBox("Projects")
-            self.hidden_projects_group.setLayout(MainWidgetProjects().hidden_main_layout)
+            self.hidden_projects_group.setLayout(projects_gui.hidden_main_layout)
 
             # 2. Board Group
-            self.hidden_board_group = QGroupBox("Board")
-            self.hidden_board_group.setLayout(MainWidgetProjects().hidden_main_layout)
+            boards_gui = BoardsGui()
+            self.hidden_board_group = QGroupBox(f"Boards[{boards_gui.board_no}]")
+            self.hidden_board_group.setLayout(boards_gui.hidden_main_layout)
 
             # 3. Knots Group
+            knots_gui = ProjectsGui()#todo change in KnotsGui
             self.hidden_knots_group = QGroupBox("Knots")
-            self.hidden_knots_group.setLayout(MainWidgetProjects().hidden_main_layout)
+            self.hidden_knots_group.setLayout(knots_gui.hidden_main_layout)#todo change the method
 
             hidden_layout.addWidget(self.hidden_projects_group, 1)
             hidden_layout.addWidget(self.hidden_board_group, 1)
