@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                                QPushButton, QGraphicsView, QGraphicsScene,
                                QSizePolicy)
-from gui.components.data_panel.data_panel import DataPanelWidget
+from gui.components.data_panel.data_panel import DataPanelWidget, HiddenDataPanelWidget
 
 
 class MainWindow(QMainWindow):
@@ -26,6 +26,11 @@ class MainWindow(QMainWindow):
         self.data_panel = DataPanelWidget()
         self.main_layout.addWidget(self.data_panel)
 
+        #Instantiate and insert the hidden data panel
+        self.hidden_data_panel = HiddenDataPanelWidget()
+        self.main_layout.addWidget(self.hidden_data_panel)
+        self.hidden_data_panel.hide()
+
         # Instantiate and insert the graphics area
         self.scene = QGraphicsScene()
         self.graphics_view = QGraphicsView(self.scene)
@@ -41,5 +46,7 @@ class MainWindow(QMainWindow):
         """Manages the visibility of the top data panel."""
         if self.data_panel.isVisible():
             self.data_panel.hide()
+            self.hidden_data_panel.show()
         else:
+            self.hidden_data_panel.hide()
             self.data_panel.show()
