@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QGroupBox, QSizePolicy
 from gui.components import data_panel
 from gui.components.data_panel.boards import BoardsGui
+from gui.components.data_panel.knots import KnotsGui
 from gui.components.data_panel.projects import ProjectsGui
 
 
@@ -27,7 +28,7 @@ class DataPanelWidget(QWidget):
         self.board_group.setLayout(boards_gui.main_layout)
 
         # 3. Knots Group
-        knots_gui = ProjectsGui()#todo change in KnotsGui
+        knots_gui = KnotsGui()
         self.knots_group = QGroupBox("Knots")
         self.knots_group.setLayout(knots_gui.main_layout)
 
@@ -59,9 +60,9 @@ class HiddenDataPanelWidget(QWidget):
             self.hidden_board_group.setLayout(boards_gui.hidden_main_layout)
 
             # 3. Knots Group
-            knots_gui = ProjectsGui()#todo change in KnotsGui
+            knots_gui = KnotsGui()
             self.hidden_knots_group = QGroupBox("Knots")
-            self.hidden_knots_group.setLayout(knots_gui.hidden_main_layout)#todo change the method
+            self.hidden_knots_group.setLayout(knots_gui.hidden_main_layout)
 
             hidden_layout.addWidget(self.hidden_projects_group, 1)
             hidden_layout.addWidget(self.hidden_board_group, 1)

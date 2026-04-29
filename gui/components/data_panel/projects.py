@@ -3,17 +3,18 @@ from PySide6.QtWidgets import QHBoxLayout, QPushButton, QLabel, QComboBox, QVBox
 
 from gui.components.common_widgets import create_shift_buttons
 
-#this is the messiest class because it's the first I did
+
+# this is the messiest class because it's the first I did
 
 class ProjectsGui:
     def __init__(self):
+        self.main_layout = None
+        self.hidden_main_layout = None
+
         self._setup_main_layout()
         self._setup_hidden_layout()
 
-
     def _setup_main_layout(self):
-
-
         new_del_layout = QHBoxLayout()
         new_btn = QPushButton("New+")
         delete_btn = QPushButton("Del-")
@@ -57,8 +58,8 @@ class ProjectsGui:
         # brings the button closer
         species_layout.setSpacing(0)
 
-        #form for bottom widgets
-        form=QFormLayout()
+        # form for bottom widgets
+        form = QFormLayout()
         form.addRow("Project No.", project_layout)
         form.addRow("Species", species_layout)
 
@@ -66,11 +67,7 @@ class ProjectsGui:
         self.main_layout.addLayout(new_del_layout)
         self.main_layout.addLayout(form)
 
-
-
-
     #############---layout for the hidden version---###################
-
 
     def _setup_hidden_layout(self):
         # horizontal layout for project label and combo box
@@ -86,15 +83,16 @@ class ProjectsGui:
         hidden_project_layout.addWidget(hidden_right_shift_btn)
         hidden_project_layout.addWidget(hidden_left_shift_btn)
         # species
+        hidden_species_layout = QHBoxLayout()
         hidden_label_species = QLabel("Species")
         hidden_combo_box_species = QComboBox()
         hidden_label_species.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         hidden_combo_box_species.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        hidden_project_layout.addWidget(hidden_label_species)
-        hidden_project_layout.addWidget(hidden_combo_box_species)
+        hidden_species_layout.addWidget(hidden_label_species)
+        hidden_species_layout.addWidget(hidden_combo_box_species)
         # brings the button closer
         hidden_project_layout.setSpacing(0)
 
-
         self.hidden_main_layout = QVBoxLayout()
         self.hidden_main_layout.addLayout(hidden_project_layout)
+        self.hidden_main_layout.addLayout(hidden_species_layout)

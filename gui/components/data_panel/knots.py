@@ -1,10 +1,16 @@
-from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QLineEdit
+from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QLineEdit, \
+    QCheckBox
 
 from gui.components.common_widgets import create_shift_buttons
 
 
-class BoardsGui:
+class KnotsGui:
     def __init__(self):
+        self.main_layout = None
+        self.hidden_main_layout = None
+        self.board_no = 0
+
+
         self._setup_main_layout()
         self.setup_hidden_layout()
 
@@ -16,7 +22,7 @@ class BoardsGui:
 
         # sub-layouts in the grid
         top_layout = QHBoxLayout()
-        top_layout.setContentsMargins(5, 0, 0, 0)
+        top_layout.setContentsMargins(0, 0, 0, 0)
         top_layout.setSpacing(0)
 
         bottom_layout = QHBoxLayout()
@@ -28,16 +34,16 @@ class BoardsGui:
         crud_layout.setSpacing(0)
 
         data_layout = QFormLayout()
-        data_layout.setContentsMargins(0, 0, 5, 5)
+        data_layout.setContentsMargins(0, 0, 5, 0)
         data_layout.setSpacing(0)
         # -
 
         # bottom layout
-        board_no_combo = QComboBox()
-        bottom_layout.addWidget(board_no_combo)
+        knot_no_combo = QComboBox()
+        bottom_layout.addWidget(knot_no_combo)
 
         # top layout
-        self.board_no = board_no_combo.count()
+        self.knot_no = knot_no_combo.count()
         # shifts
         right_shift_btn, left_shift_btn = create_shift_buttons()  # todo get these close together
 
@@ -57,17 +63,18 @@ class BoardsGui:
 
         # data layout
         # no_line = QLineEdit()      #as below
-        height_line = QLineEdit()
-        base_line = QLineEdit()
-        length_line = QLineEdit()
-        testpos_line = QLineEdit()
+        x_line = QLineEdit()
+        pith_z_line = QLineEdit()
+        pith_y_line = QLineEdit()
         comment_line = QLineEdit()
         # data_layout.addRow("No.", no_line)     #only add if you cannot modify number from the comboBox
-        data_layout.addRow("Height", height_line)
-        data_layout.addRow("Base", base_line)
-        data_layout.addRow("Length", length_line)
-        data_layout.addRow("TestPos", testpos_line)
+        data_layout.addRow("X", x_line)
+        data_layout.addRow("Pith Z", pith_z_line)
+        data_layout.addRow("Pith Y", pith_y_line)
         data_layout.addRow("Comment", comment_line)
+        fake_pith = QCheckBox()
+        fake_pith.setChecked(False)
+        data_layout.addRow("Fake pith:",fake_pith)
 
         # grid disposition
         self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
@@ -94,11 +101,11 @@ class BoardsGui:
         hidden_data_layout.setSpacing(0)
 
         # bottom layout
-        board_no_combo = QComboBox()
-        hidden_bottom_layout.addWidget(board_no_combo)
+        knot_no_combo = QComboBox()
+        hidden_bottom_layout.addWidget(knot_no_combo)
 
         # top layout
-        self.board_no = board_no_combo.count()
+        self.knot_no = knot_no_combo.count()
         # shifts
         right_shift_btn, left_shift_btn = create_shift_buttons()  # todo get these close together
 
@@ -108,22 +115,31 @@ class BoardsGui:
         # -
 
         # data layout
-        height_line = QLineEdit()
-        base_line = QLineEdit()
-        length_line = QLineEdit()
+        x_line = QLineEdit()
+        pith_z_line = QLineEdit()
+        pith_y_line = QLineEdit()
         # use form layout to represent data and add horizontally
-        height = QFormLayout()
-        height.setContentsMargins(0, 0, 0, 0)
-        base = QFormLayout()
-        base.setContentsMargins(5, 0, 0, 0)
-        length = QFormLayout()
-        length.setContentsMargins(5, 0, 0, 0)
-        height.addRow("Height", height_line)
-        base.addRow("Base", base_line)
-        length.addRow("Length", length_line)
-        hidden_data_layout.addLayout(height)
-        hidden_data_layout.addLayout(base)
-        hidden_data_layout.addLayout(length)
+        X = QFormLayout()
+        X.setContentsMargins(0, 0, 0, 0)
+        pith_z = QFormLayout()
+        pith_z.setContentsMargins(5, 0, 0, 0)
+        pith_y = QFormLayout()
+        pith_y.setContentsMargins(5, 0, 0, 0)
+        comment = QFormLayout()
+        comment.setContentsMargins(5, 0, 0, 0)
+        X.addRow("X", x_line)
+        pith_z.addRow("Pith Z", pith_z_line)
+        pith_y.addRow("Length Y", pith_y_line)
+        comment.addRow("Comment", comment)
+        hidden_data_layout.addLayout(X)
+        hidden_data_layout.addLayout(pith_z)
+        hidden_data_layout.addLayout(pith_y)
+        hidden_data_layout.addLayout(comment)
+        #check box for the fake pith
+        fake_pith = QCheckBox()
+        fake_pith.setChecked(False)
+        hidden_data_layout.addWidget(fake_pith)
+
 
         # grid disposition
         self.hidden_main_layout.addLayout(hidden_top_layout, 0, 1, 1, 1)
