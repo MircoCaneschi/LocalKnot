@@ -23,5 +23,7 @@ def create_shift_buttons():
     left_btn.setMaximumWidth(30)
     left_btn.setMinimumWidth(30)
 
+
+
     return right_btn, left_btn
 

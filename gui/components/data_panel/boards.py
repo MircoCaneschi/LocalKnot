@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QLineEdit
+from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QLineEdit, \
+    QCompleter
+from PySide6.QtCore import Qt
 
 from gui.components.common_widgets import create_shift_buttons
 
@@ -33,8 +35,19 @@ class BoardsGui:
         # -
 
         # bottom layout
+            #combo box
         board_no_combo = QComboBox()
-        bottom_layout.addWidget(board_no_combo)
+        board_no_combo.setEditable(True)    #todo attach proper data
+        temporary_list=["1", "2", "3","4672", "3234", "3445", "4325", "1438", "4382", "9999"]  # example items, replace with actual board numbers
+        board_no_combo.addItems(temporary_list)  # example items, replace with actual board numbers
+
+            #combo box autocomplete
+        completer=QCompleter(temporary_list)    # example items, replace with actual board numbers
+        completer.setFilterMode(Qt.MatchFlag.MatchStartsWith)
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        board_no_combo.setCompleter(completer)
+
+        bottom_layout.addWidget(board_no_combo,1)
 
         # top layout
         self.board_no = board_no_combo.count()
@@ -43,6 +56,7 @@ class BoardsGui:
 
         top_layout.addWidget(right_shift_btn)
         top_layout.addWidget(left_shift_btn)
+        top_layout.addStretch(1)
         top_layout.setContentsMargins(0, 0, 0, 0)
         # -
 
@@ -51,6 +65,9 @@ class BoardsGui:
         new_btn = QPushButton("New+")
         save_btn = QPushButton("Save")
         delete_btn = QPushButton("Del-")
+        new_btn.setMinimumWidth(50)
+        save_btn.setMinimumWidth(50)
+        delete_btn.setMinimumWidth(50)
         crud_layout.addWidget(new_btn)
         crud_layout.addWidget(save_btn)
         crud_layout.addWidget(delete_btn)

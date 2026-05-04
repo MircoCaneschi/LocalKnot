@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QLineEdit, \
-    QCheckBox
+    QCheckBox, QSizePolicy
 
 from gui.components.common_widgets import create_shift_buttons
 
@@ -41,15 +41,17 @@ class KnotsGui:
 
         # bottom layout
         knot_no_combo = QComboBox()
-        bottom_layout.addWidget(knot_no_combo)
+        knot_no_combo.setEditable(True)
+        bottom_layout.addWidget(knot_no_combo,1)
 
         # top layout
         self.knot_no = knot_no_combo.count()
         # shifts
-        right_shift_btn, left_shift_btn = create_shift_buttons()  # todo get these close together
+        right_shift_btn, left_shift_btn = create_shift_buttons()
 
         top_layout.addWidget(right_shift_btn)
         top_layout.addWidget(left_shift_btn)
+        top_layout.addStretch(1)
         top_layout.setContentsMargins(0, 0, 0, 0)
         # -
 
@@ -58,6 +60,9 @@ class KnotsGui:
         new_btn = QPushButton("New+")
         save_btn = QPushButton("Save")
         delete_btn = QPushButton("Del-")
+        new_btn.setMinimumWidth(50)
+        save_btn.setMinimumWidth(50)
+        delete_btn.setMinimumWidth(50)
         crud_layout.addWidget(new_btn)
         crud_layout.addWidget(save_btn)
         crud_layout.addWidget(delete_btn)
@@ -126,16 +131,12 @@ class KnotsGui:
         pith_z.setContentsMargins(5, 0, 0, 0)
         pith_y = QFormLayout()
         pith_y.setContentsMargins(5, 0, 0, 0)
-        comment = QFormLayout()
-        comment.setContentsMargins(5, 0, 0, 0)
         x.addRow("X", x_line)
         pith_z.addRow("Pith Z", pith_z_line)
         pith_y.addRow("Length Y", pith_y_line)
-        comment.addRow("Comment", comment)
         hidden_data_layout.addLayout(x)
         hidden_data_layout.addLayout(pith_z)
         hidden_data_layout.addLayout(pith_y)
-        hidden_data_layout.addLayout(comment)
         #check box for the fake pith
         fake_pith = QCheckBox()
         fake_pith.setChecked(False)

@@ -19,14 +19,21 @@ class ProjectsGui:
         new_btn = QPushButton("New+")
         delete_btn = QPushButton("Del-")
         change_name_btn = QPushButton("Modify")
+        save_btn = QPushButton("Save")
         # gives dimension
+        new_btn.setMinimumWidth(50)
+        delete_btn.setMinimumWidth(50)
+        change_name_btn.setMinimumWidth(60)
+        save_btn.setMinimumWidth(50)
         new_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         delete_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         change_name_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        save_btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         # -
         new_del_layout.addWidget(new_btn, 1)
         new_del_layout.addWidget(delete_btn, 1)
         new_del_layout.addWidget(change_name_btn, 1)
+        new_del_layout.addWidget(save_btn, 1)
         # brings the button closer
         new_del_layout.setSpacing(0)
         # spacer to align left the widgets
@@ -36,6 +43,7 @@ class ProjectsGui:
         # horizontal layout for project label and combo box
         project_layout = QHBoxLayout()
         combo_box_projects = QComboBox()
+        combo_box_projects.setEditable(True)
         combo_box_projects.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         project_layout.addWidget(combo_box_projects)
         # shifts
@@ -60,7 +68,7 @@ class ProjectsGui:
 
         # form for bottom widgets
         form = QFormLayout()
-        form.addRow("Project No.", project_layout)
+        form.addRow("Project.", project_layout)
         form.addRow("Species", species_layout)
 
         self.main_layout = QVBoxLayout()
@@ -72,7 +80,7 @@ class ProjectsGui:
     def _setup_hidden_layout(self):
         # horizontal layout for project label and combo box
         hidden_project_layout = QHBoxLayout()
-        hidden_project_no_label = QLabel("Project No.")
+        hidden_project_no_label = QLabel("Project")
         hidden_combo_box_projects = QComboBox()
         hidden_project_no_label.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         hidden_combo_box_projects.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
