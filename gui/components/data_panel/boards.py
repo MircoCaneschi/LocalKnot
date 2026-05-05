@@ -117,7 +117,7 @@ class BoardsGui:
         # top layout
         self.board_no = board_no_combo.count()
         # shifts
-        right_shift_btn, left_shift_btn = create_shift_buttons()  # todo get these close together
+        right_shift_btn, left_shift_btn = create_shift_buttons()
 
         hidden_top_layout.addWidget(right_shift_btn)
         hidden_top_layout.addWidget(left_shift_btn)
