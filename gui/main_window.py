@@ -1,7 +1,10 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
                                QPushButton, QGraphicsView, QGraphicsScene,
                                QSizePolicy)
+
+from controllers.data_panel_controller import ProjectsController, BoardsController, KnotsController
 from gui.components.data_panel.data_panel import DataPanelWidget, HiddenDataPanelWidget
+
 
 
 class MainWindow(QMainWindow):
@@ -30,6 +33,11 @@ class MainWindow(QMainWindow):
         self.hidden_data_panel = HiddenDataPanelWidget()
         self.main_layout.addWidget(self.hidden_data_panel)
         self.hidden_data_panel.hide()
+
+        #Instantiate the controllers
+        self.projects_controller = ProjectsController(self.data_panel, self.hidden_data_panel)
+        self.boards_controller = BoardsController(self.data_panel, self.hidden_data_panel)
+        self.knots_controller = KnotsController(self.data_panel, self.hidden_data_panel)
 
         # Instantiate and insert the graphics area
         self.scene = QGraphicsScene()
