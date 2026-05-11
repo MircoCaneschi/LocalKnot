@@ -34,10 +34,6 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.hidden_data_panel)
         self.hidden_data_panel.hide()
 
-        #Instantiate the controllers
-        self.projects_controller = ProjectsController(self.data_panel, self.hidden_data_panel)
-        self.boards_controller = BoardsController(self.data_panel, self.hidden_data_panel)
-        self.knots_controller = KnotsController(self.data_panel, self.hidden_data_panel)
 
         # Instantiate and insert the graphics area
         self.scene = QGraphicsScene()

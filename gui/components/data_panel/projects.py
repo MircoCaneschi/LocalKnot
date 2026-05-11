@@ -21,12 +21,12 @@ class ProjectsGui:
         self.add_species_btn = None
         self.right_shift_btn = None
         self.left_shift_btn = None
-        #----------------------------
+        # ----------------------------
         self.hidden_combo_box_projects = None
         self.hidden_combo_box_species = None
         self.hidden_right_shift_btn = None
         self.hidden_left_shift_btn = None
-        #-
+        # -
 
         self._setup_main_layout()
         self._setup_hidden_layout()
@@ -85,7 +85,7 @@ class ProjectsGui:
         # brings the button closer
         species_layout.setSpacing(2)
 
-        #messages
+        # messages
         self.project_msg = QLabel()
         self.species_msg = QLabel()
         self.project_msg.hide()
@@ -138,3 +138,53 @@ class ProjectsGui:
         self.hidden_main_layout = QVBoxLayout()
         self.hidden_main_layout.addLayout(hidden_project_layout)
         self.hidden_main_layout.addLayout(hidden_species_layout)
+
+    # --- API FOR TH CONTROLLER ---
+
+    # Getters
+    def get_project_text(self) -> str:
+        return self.combo_box_projects.currentText().strip()
+
+    def get_species_text(self) -> str:
+        return self.combo_box_species.currentText().strip()
+
+    def is_species_editable(self) -> bool:
+        return self.combo_box_species.isEditable()
+
+    def project_exists_in_combo(self, text: str) -> bool:
+        return self.combo_box_projects.findText(text) != -1
+
+    def species_exists_in_combo(self, text: str) -> bool:
+        return self.combo_box_species.findText(text) != -1
+
+        # Setters 
+
+    def add_project_to_combo(self, text: str):
+        self.combo_box_projects.addItem(text)
+
+    def add_species_to_combo(self, text: str):
+        self.combo_box_species.addItem(text)
+
+        # Azioni Visive
+
+    def set_project_editable(self, editable: bool):
+        self.combo_box_projects.setEditable(editable)
+
+    def set_species_editable(self, editable: bool):
+        self.combo_box_species.setEditable(editable)
+
+    def clear_inputs(self):
+        self.combo_box_projects.clearEditText()
+        self.combo_box_species.clearEditText()
+
+    def show_project_message(self, text: str):
+        self.project_msg.setText(text)
+        self.project_msg.show()
+
+    def show_species_message(self, text: str):
+        self.species_msg.setText(text)
+        self.species_msg.show()
+
+    def hide_messages(self):
+        self.project_msg.hide()
+        self.species_msg.hide()
