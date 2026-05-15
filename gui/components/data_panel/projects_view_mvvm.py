@@ -17,10 +17,25 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QPushButton, QLabel, QComboBox, QVBoxLayout,
     QSizePolicy, QSpacerItem, QFormLayout
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QObject, QEvent
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import ProjectsViewModel
+
+
+class SpeciesInteractionFilter(QObject):
+    """Filters events to prevent opening the combo box while keeping it visually enabled."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.is_enabled = False
+
+    def eventFilter(self, obj, event):
+        if not self.is_enabled:
+            # Block mouse clicks and key presses that open the combo box
+            if event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease, 
+                               QEvent.MouseButtonDblClick, QEvent.KeyPress]:
+                return True
+        return super().eventFilter(obj, event)
 
 
 class ProjectsView:
@@ -76,6 +91,12 @@ class ProjectsView:
         # Setup UI
         self._setup_main_layout()
         self._setup_hidden_layout()
+
+        # Event Filters for Species ComboBoxes (to keep them sharp when disabled)
+        self.species_filter = SpeciesInteractionFilter()
+        self.hidden_species_filter = SpeciesInteractionFilter()
+        self.combo_box_species.installEventFilter(self.species_filter)
+        self.hidden_combo_box_species.installEventFilter(self.hidden_species_filter)
 
         # Bind ViewModel
         self._bind_to_view_model()
@@ -232,6 +253,8 @@ class ProjectsView:
         
         self.view_model.species_editable_changed.connect(self.set_species_editable)
         self.view_model.species_enabled_changed.connect(self.set_species_enabled)
+        self.view_model.save_enabled_changed.connect(self.save_btn.setEnabled)
+        self.view_model.navigation_enabled_changed.connect(self._on_navigation_enabled_changed)
         self.view_model.species_error.connect(self._on_species_error)
         self.view_model.species_added.connect(self._on_species_added)
         
@@ -248,27 +271,44 @@ class ProjectsView:
         self._on_species_changed(self.view_model.species_list)
         self._on_hidden_species_changed(self.view_model.species_list)
         
+        # Sync initial selection
+        self.combo_box_projects.setCurrentText(self.view_model.current_project)
+        self.hidden_combo_box_projects.setCurrentText(self.view_model.current_project)
+        self.combo_box_species.setCurrentText(self.view_model.current_species)
+        self.hidden_combo_box_species.setCurrentText(self.view_model.current_species)
+        
         # Initial UI constraints
         self.set_species_enabled(False)
+        self.save_btn.setEnabled(False)
 
     # ==================== SIGNAL HANDLERS (from ViewModel) ====================
 
     def _on_projects_changed(self, projects: list):
-        """Updates main combo box with new projects list."""
-        current = self.view_model.current_project
+        """Intelligently updates main combo box without clearing if possible."""
         self.combo_box_projects.blockSignals(True)
-        self.combo_box_projects.clear()
-        self.combo_box_projects.addItems(projects)
-        self.combo_box_projects.setCurrentText(current)
+        
+        # Get current items
+        existing_items = [self.combo_box_projects.itemText(i) for i in range(self.combo_box_projects.count())]
+        
+        if existing_items != projects:
+            self.combo_box_projects.clear()
+            self.combo_box_projects.addItems(projects)
+        
+        # Always sync with current selection from ViewModel
+        self.combo_box_projects.setCurrentText(self.view_model.current_project)
         self.combo_box_projects.blockSignals(False)
 
     def _on_hidden_projects_changed(self, projects: list):
-        """Updates hidden combo box with new projects list."""
-        current = self.view_model.current_project
+        """Intelligently updates hidden combo box without clearing."""
         self.hidden_combo_box_projects.blockSignals(True)
-        self.hidden_combo_box_projects.clear()
-        self.hidden_combo_box_projects.addItems(projects)
-        self.hidden_combo_box_projects.setCurrentText(current)
+        
+        existing_items = [self.hidden_combo_box_projects.itemText(i) for i in range(self.hidden_combo_box_projects.count())]
+        
+        if existing_items != projects:
+            self.hidden_combo_box_projects.clear()
+            self.hidden_combo_box_projects.addItems(projects)
+            
+        self.hidden_combo_box_projects.setCurrentText(self.view_model.current_project)
         self.hidden_combo_box_projects.blockSignals(False)
 
     def _on_species_changed(self, species: list):
@@ -365,19 +405,51 @@ class ProjectsView:
 
     def set_project_editable(self, state: bool):
         """Check if project combo is editable."""
+        self.combo_box_projects.blockSignals(True)
+        self.hidden_combo_box_projects.blockSignals(True)
+        
         self.hidden_combo_box_projects.setEditable(state)
         self.combo_box_projects.setEditable(state)
+        
+        # When returning to non-editable, Qt resets the index. Force it back.
+        if not state:
+            self.combo_box_projects.setCurrentText(self.view_model.current_project)
+            self.hidden_combo_box_projects.setCurrentText(self.view_model.current_project)
+            
+        self.combo_box_projects.blockSignals(False)
+        self.hidden_combo_box_projects.blockSignals(False)
 
     def set_species_editable(self, state: bool):
         """Check if species combo is editable."""
+        self.combo_box_species.blockSignals(True)
+        self.hidden_combo_box_species.blockSignals(True)
+        
         self.hidden_combo_box_species.setEditable(state)
         self.combo_box_species.setEditable(state)
+        
+        # When returning to non-editable, Qt resets the index. Force it back.
+        if not state:
+            self.combo_box_species.setCurrentText(self.view_model.current_species)
+            self.hidden_combo_box_species.setCurrentText(self.view_model.current_species)
+            
+        self.combo_box_species.blockSignals(False)
+        self.hidden_combo_box_species.blockSignals(False)
 
     def set_species_enabled(self, state: bool):
-        """Enable or disable the species combo box and add button."""
-        self.combo_box_species.setEnabled(state)
-        self.hidden_combo_box_species.setEnabled(state)
+        """
+        Enable or disable the species selection.
+        Instead of setEnabled(False) which fades the widget, we use an event filter
+        to block interaction while keeping the visual state sharp.
+        """
+        self.species_filter.is_enabled = state
+        self.hidden_species_filter.is_enabled = state
         self.add_species_btn.setEnabled(state)
+
+    def _on_navigation_enabled_changed(self, enabled: bool):
+        """Enable or disable navigation buttons (New, Modify, Delete)."""
+        self.new_btn.setEnabled(enabled)
+        self.change_name_btn.setEnabled(enabled)
+        self.delete_btn.setEnabled(enabled)
 
     def _on_project_selection_changed(self, text: str):
         # Update the ViewModel

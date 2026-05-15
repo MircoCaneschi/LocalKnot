@@ -45,6 +45,10 @@ def main():
             padding-left: 7px;
             padding-top: 7px;
         }
+        QPushButton:disabled {
+            background-color: #A06A33;
+            color: #D3A87C;
+        }
         QLabel {
             color: #824300;
         }

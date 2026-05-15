@@ -57,8 +57,14 @@ class ProjectsViewModel(QObject):
     # Emitted when entering or leaving project modification mode
     project_modify_mode = Signal(bool)
 
-    # Emitted to enable or disable the species combo box
+    # Emitted to enable or disable the species combo box (interaction)
     species_enabled_changed = Signal(bool)
+
+    # Emitted to enable or disable the save button
+    save_enabled_changed = Signal(bool)
+
+    # Emitted to enable or disable navigation buttons (New, Modify, Delete)
+    navigation_enabled_changed = Signal(bool)
 
     # ==================== CONSTRUCTOR ====================
 
@@ -85,6 +91,11 @@ class ProjectsViewModel(QObject):
         # Load initial data
         self._load_projects_from_db()
         self._load_species_from_db()
+        
+        # Initial states
+        self.save_enabled_changed.emit(False)
+        self.navigation_enabled_changed.emit(True)
+        self.species_enabled_changed.emit(False)
 
     # ==================== PROPERTIES ====================
 
@@ -118,6 +129,7 @@ class ProjectsViewModel(QObject):
         """Set the current project (property setter)."""
         if self._current_project != value:
             self._current_project = value
+            self.current_project_changed.emit(value)
 
             #changing the species associated with the project
             matching_project = next((p for p in self._projects if p.name == value), None)
@@ -158,6 +170,7 @@ class ProjectsViewModel(QObject):
         """
         self._is_modifying = False
         self.project_modify_mode.emit(False)
+        self.navigation_enabled_changed.emit(False)
 
         # 1. Make editable FIRST so the UI accepts custom/empty text
         self._project_editable = True
@@ -165,6 +178,7 @@ class ProjectsViewModel(QObject):
 
         # Enable species selection
         self.species_enabled_changed.emit(True)
+        self.save_enabled_changed.emit(True)
 
         # 2. Set internal state and emit changes to clear UI
         self._current_project = ""
@@ -245,6 +259,8 @@ class ProjectsViewModel(QObject):
             self.species_editable_changed.emit(False)
             
             self.species_enabled_changed.emit(False)
+            self.save_enabled_changed.emit(False)
+            self.navigation_enabled_changed.emit(True)
             
             # Re-select the saved project
             self.current_project = project.name
@@ -303,6 +319,8 @@ class ProjectsViewModel(QObject):
         self.project_editable_changed.emit(True)
 
         self.species_enabled_changed.emit(True)
+        self.save_enabled_changed.emit(True)
+        self.navigation_enabled_changed.emit(False)
 
     # ==================== PRIVATE METHODS ====================
 
@@ -314,6 +332,16 @@ class ProjectsViewModel(QObject):
             for p in self._projects:
                 print(f"DEBUG: Project: {p.name} ({p.species})")
             self.projects_changed.emit(self.project_list)
+            
+            # Synchronize initial state: select first project if none selected
+            if self._projects and not self._current_project:
+                first_project = self._projects[0].name
+                self._current_project = first_project
+                self.current_project_changed.emit(first_project)
+                
+                self._current_species = self._projects[0].species
+                self.current_species_changed.emit(self._current_species)
+                
         except Exception as e:
             print(f"DEBUG: Failed to load projects: {str(e)}")
             self.project_error.emit(f"Failed to load projects: {str(e)}")
