@@ -1,18 +1,21 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout,
+from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QGraphicsView, QGraphicsScene,
-                               QSizePolicy)
+                               QSizePolicy, QGroupBox)
 
-from controllers.data_panel_controller import ProjectsController, BoardsController, KnotsController
-from gui.components.data_panel.data_panel import DataPanelWidget, HiddenDataPanelWidget
-
+from core.database import DatabaseManager
+from core.repository import ProjectRepository, BoardRepository, KnotRepository
+from mvvm.viewmodels import ProjectsViewModel, BoardsViewModel, KnotsViewModel
+from gui.components.data_panel.projects_view_mvvm import ProjectsView
+from gui.components.data_panel.boards_view_mvvm import BoardsView
+from gui.components.data_panel.knots_view_mvvm import KnotsView
 
 
 class MainWindow(QMainWindow):
-    """Main application window."""
+    """Main application window with MVVM architecture."""
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("LocalKnot")
+        self.setWindowTitle("LocalKnot - MVVM Architecture")
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -20,26 +23,81 @@ class MainWindow(QMainWindow):
         # Main vertical layout
         self.main_layout = QVBoxLayout(central_widget)
 
-        # Button to toggle the data panel visibility
+        # ==================== Setup MVVM Components ====================
+
+        # Setup Database and Repositories
+        self.db = DatabaseManager()
+        self.project_repo = ProjectRepository(self.db)
+        self.board_repo = BoardRepository(self.db)
+        self.knot_repo = KnotRepository(self.db)
+
+        # Create ViewModels
+        self.projects_vm = ProjectsViewModel(self.project_repo)
+        self.boards_vm = BoardsViewModel(self.board_repo)
+        self.knots_vm = KnotsViewModel(self.knot_repo)
+
+        # Create Views
+        self.projects_view = ProjectsView(self.projects_vm)
+        self.boards_view = BoardsView(self.boards_vm)
+        self.knots_view = KnotsView(self.knots_vm)
+
+        # ==================== Add to Layout ====================
+
+        # Toolbar with toggle button
+        toolbar_layout = QHBoxLayout()
         self.toggle_panel_btn = QPushButton("Toggle Data Panel")
         self.toggle_panel_btn.clicked.connect(self._toggle_data_panel)
-        self.main_layout.addWidget(self.toggle_panel_btn)
+        toolbar_layout.addWidget(self.toggle_panel_btn)
+        self.main_layout.addLayout(toolbar_layout)
 
-        # Instantiate and insert the data panel
-        self.data_panel = DataPanelWidget()
-        self.main_layout.addWidget(self.data_panel)
+        # Data panel container
+        self.data_panel_container = QWidget()
+        self.data_panel_layout = QHBoxLayout(self.data_panel_container)
 
-        #Instantiate and insert the hidden data panel
-        self.hidden_data_panel = HiddenDataPanelWidget()
-        self.main_layout.addWidget(self.hidden_data_panel)
-        self.hidden_data_panel.hide()
+        # Add all views to their QGroupBox
+        self.project_group = QGroupBox(f"Projects[{self.projects_view.combo_box_projects.count()}]")
+        self.board_group = QGroupBox(f"Boards[{self.boards_view.board_no_combo.count()}]")
+        self.knot_group = QGroupBox(f"Knots[{self.knots_view.knot_no_combo.count()}]")
 
+        self.project_group.setLayout(self.projects_view.main_layout)
+        self.board_group.setLayout(self.boards_view.main_layout)
+        self.knot_group.setLayout(self.knots_view.main_layout)
 
-        # Instantiate and insert the graphics area
+        # Add groups to the layout
+        self.data_panel_layout.addWidget(self.project_group)
+        self.data_panel_layout.addWidget(self.board_group)
+        self.data_panel_layout.addWidget(self.knot_group)
+
+        self.main_layout.addWidget(self.data_panel_container)
+
+        # Hidden panel (compact view)
+        self.hidden_data_panel_container = QWidget()
+        self.hidden_data_panel_layout = QHBoxLayout(self.hidden_data_panel_container)
+
+        # Hidden groupBox
+        self.hidden_project_group = QGroupBox(f"Projects[{self.projects_view.combo_box_projects.count()}]")
+        self.hidden_board_group = QGroupBox(f"Boards[{self.boards_view.board_no_combo.count()}]")
+        self.hidden_knot_group = QGroupBox(f"Knots[{self.knots_view.knot_no_combo.count()}]")
+
+        self.hidden_project_group.setLayout(self.projects_view.hidden_main_layout)
+        self.hidden_board_group.setLayout(self.boards_view.hidden_main_layout)
+        self.hidden_knot_group.setLayout(self.knots_view.hidden_main_layout)
+
+        # Add hidden views
+        if hasattr(self.projects_view, 'hidden_main_layout') and self.projects_view.hidden_main_layout:
+            self.hidden_data_panel_layout.addWidget(self.hidden_project_group, 1)
+        if hasattr(self.boards_view, 'hidden_main_layout') and self.boards_view.hidden_main_layout:
+            self.hidden_data_panel_layout.addWidget(self.hidden_board_group, 1)
+        if hasattr(self.knots_view, 'hidden_main_layout') and self.knots_view.hidden_main_layout:
+            self.hidden_data_panel_layout.addWidget(self.hidden_knot_group, 1)
+
+        #self.hidden_data_panel_layout.addStretch()
+        self.main_layout.addWidget(self.hidden_data_panel_container)
+        self.hidden_data_panel_container.hide()
+
+        # Graphics area
         self.scene = QGraphicsScene()
         self.graphics_view = QGraphicsView(self.scene)
-
-        # Force the view to expand
         self.graphics_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.main_layout.addWidget(self.graphics_view)
 
@@ -48,9 +106,9 @@ class MainWindow(QMainWindow):
 
     def _toggle_data_panel(self):
         """Manages the visibility of the top data panel."""
-        if self.data_panel.isVisible():
-            self.data_panel.hide()
-            self.hidden_data_panel.show()
+        if self.data_panel_container.isVisible():
+            self.data_panel_container.hide()
+            self.hidden_data_panel_container.show()
         else:
-            self.hidden_data_panel.hide()
-            self.data_panel.show()
+            self.hidden_data_panel_container.hide()
+            self.data_panel_container.show()

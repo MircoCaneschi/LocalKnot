@@ -16,7 +16,7 @@ Dependencies:
 
 from typing import List, Optional
 from core.database import DatabaseManager
-from core.data_models import Project, Board, Knot
+from mvvm.models import Project, Board, Knot
 
 
 class ProjectRepository:
@@ -43,7 +43,14 @@ class ProjectRepository:
         Returns:
             List[Project]: List of all projects
         """
-        pass
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_project, species FROM project")
+                rows = cursor.fetchall()
+                return [Project(name=row[0], species=row[1]) for row in rows]
+        except Exception as e:
+            raise Exception(f"Failed to get projects: {str(e)}")
 
     def get_project_by_id(self, project_id: str) -> Optional[Project]:
         """
@@ -55,7 +62,16 @@ class ProjectRepository:
         Returns:
             Optional[Project]: Project if found, None otherwise
         """
-        pass
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_project, species FROM project WHERE id_project = ?", (project_id,))
+                row = cursor.fetchone()
+                if row:
+                    return Project(name=row[0], species=row[1])
+                return None
+        except Exception as e:
+            raise Exception(f"Failed to get project: {str(e)}")
 
     def add_project(self, project: Project) -> bool:
         """
@@ -67,19 +83,56 @@ class ProjectRepository:
         Returns:
             bool: True if successful, False otherwise
         """
-        pass
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO project (id_project, species) VALUES (?, ?)",
+                    (project.name, project.species)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to add project: {str(e)}")
 
-    def update_project(self, project: Project) -> bool:
+    def update_project(self, old_project_name: str, project: Project) -> bool:
         """
-        Update an existing project.
+        Update an existing project and cascade renaming if necessary.
 
         Args:
+            old_project_name: The original name of the project
             project: Project instance with updated data
 
         Returns:
             bool: True if successful, False otherwise
         """
-        pass
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                if old_project_name != project.name:
+                    # Rename project and manually cascade to boards and knots
+                    cursor.execute(
+                        "UPDATE project SET id_project = ?, species = ? WHERE id_project = ?",
+                        (project.name, project.species, old_project_name)
+                    )
+                    cursor.execute(
+                        "UPDATE board SET id_project = ? WHERE id_project = ?",
+                        (project.name, old_project_name)
+                    )
+                    cursor.execute(
+                        "UPDATE knot SET id_project = ? WHERE id_project = ?",
+                        (project.name, old_project_name)
+                    )
+                else:
+                    # Just update species
+                    cursor.execute(
+                        "UPDATE project SET species = ? WHERE id_project = ?",
+                        (project.species, old_project_name)
+                    )
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to update project: {str(e)}")
 
     def delete_project(self, project_id: str) -> bool:
         """
@@ -91,7 +144,14 @@ class ProjectRepository:
         Returns:
             bool: True if successful, False otherwise
         """
-        pass
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM project WHERE id_project = ?", (project_id,))
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to delete project: {str(e)}")
 
     def project_exists(self, project_id: str) -> bool:
         """
@@ -103,7 +163,13 @@ class ProjectRepository:
         Returns:
             bool: True if exists, False otherwise
         """
-        pass
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM project WHERE id_project = ? LIMIT 1", (project_id,))
+                return cursor.fetchone() is not None
+        except:
+            return False
 
 
 class BoardRepository:
@@ -123,79 +189,77 @@ class BoardRepository:
         self.db = db_manager
 
     def get_all_boards(self, project_id: str) -> List[Board]:
-        """
-        Get all boards for a specific project.
+        """Get all boards for a specific project."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_board, id_project, height, base, length, testpos, comment FROM board WHERE id_project = ?", (project_id,))
+                rows = cursor.fetchall()
+                return [Board(board_no=row[0], height=row[2], base=row[3], length=row[4], test_position=row[5], comment=row[6]) for row in rows]
+        except Exception as e:
+            raise Exception(f"Failed to get boards: {str(e)}")
 
-        Args:
-            project_id: Project ID to get boards for
-
-        Returns:
-            List[Board]: List of boards in project
-        """
-        pass
-
-    def get_board_by_id(self, board_id: int, project_id: str) -> Optional[Board]:
-        """
-        Get a specific board by ID.
-
-        Args:
-            board_id: Board ID to retrieve
-            project_id: Project ID (composite key)
-
-        Returns:
-            Optional[Board]: Board if found, None otherwise
-        """
-        pass
+    def get_board_by_id(self, board_id: str, project_id: str) -> Optional[Board]:
+        """Get a specific board by ID."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_board, id_project, height, base, length, testpos, comment FROM board WHERE id_board = ? AND id_project = ?", (board_id, project_id))
+                row = cursor.fetchone()
+                if row:
+                    return Board(board_no=row[0], height=row[2], base=row[3], length=row[4], test_position=row[5], comment=row[6])
+                return None
+        except Exception as e:
+            raise Exception(f"Failed to get board: {str(e)}")
 
     def add_board(self, board: Board) -> bool:
-        """
-        Add a new board to database.
-
-        Args:
-            board: Board instance to add
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        pass
+        """Add a new board to database."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO board (id_board, id_project, height, base, length, testpos, comment) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (board.board_no, "", board.height, board.base, board.length, board.test_position, board.comment)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to add board: {str(e)}")
 
     def update_board(self, board: Board) -> bool:
-        """
-        Update an existing board.
+        """Update an existing board."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE board SET height = ?, base = ?, length = ?, testpos = ?, comment = ? WHERE id_board = ?",
+                    (board.height, board.base, board.length, board.test_position, board.comment, board.board_no)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to update board: {str(e)}")
 
-        Args:
-            board: Board instance with updated data
+    def delete_board(self, board_id: str, project_id: str) -> bool:
+        """Delete a board (cascades to knots)."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM board WHERE id_board = ?", (board_id,))
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to delete board: {str(e)}")
 
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        pass
-
-    def delete_board(self, board_id: int, project_id: str) -> bool:
-        """
-        Delete a board (cascades to knots).
-
-        Args:
-            board_id: Board ID to delete
-            project_id: Project ID (composite key)
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        pass
-
-    def board_exists(self, board_id: int, project_id: str) -> bool:
-        """
-        Check if a board exists.
-
-        Args:
-            board_id: Board ID to check
-            project_id: Project ID (composite key)
-
-        Returns:
-            bool: True if exists, False otherwise
-        """
-        pass
+    def board_exists(self, board_id: str, project_id: str) -> bool:
+        """Check if a board exists."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM board WHERE id_board = ? LIMIT 1", (board_id,))
+                return cursor.fetchone() is not None
+        except:
+            return False
 
 
 class KnotRepository:
@@ -214,87 +278,80 @@ class KnotRepository:
         """
         self.db = db_manager
 
-    def get_all_knots(self, board_id: int, project_id: str) -> List[Knot]:
-        """
-        Get all knots for a specific board.
+    def get_all_knots(self, board_id: str, project_id: str) -> List[Knot]:
+        """Get all knots for a specific board."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_board = ?", (board_id,))
+                rows = cursor.fetchall()
+                return [Knot(knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6]) for row in rows]
+        except Exception as e:
+            raise Exception(f"Failed to get knots: {str(e)}")
 
-        Args:
-            board_id: Board ID to get knots for
-            project_id: Project ID (parent of board)
-
-        Returns:
-            List[Knot]: List of knots in board
-        """
-        pass
-
-    def get_knot_by_id(self, knot_id: int, board_id: int,
-                      project_id: str) -> Optional[Knot]:
-        """
-        Get a specific knot by ID.
-
-        Args:
-            knot_id: Knot ID to retrieve
-            board_id: Board ID (composite key)
-            project_id: Project ID (composite key)
-
-        Returns:
-            Optional[Knot]: Knot if found, None otherwise
-        """
-        pass
+    def get_knot_by_id(self, knot_id: str, board_id: str, project_id: str) -> Optional[Knot]:
+        """Get a specific knot by ID."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_nodo = ? AND id_board = ?", (knot_id, board_id))
+                row = cursor.fetchone()
+                if row:
+                    return Knot(knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6])
+                return None
+        except Exception as e:
+            raise Exception(f"Failed to get knot: {str(e)}")
 
     def add_knot(self, knot: Knot) -> bool:
-        """
-        Add a new knot to database.
-
-        Args:
-            knot: Knot instance to add
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        pass
+        """Add a new knot to database."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO knot (id_nodo, id_board, id_project, x, pith_z, pith_y, comment, fake_pith, side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)",
+                    (knot.knot_no, "", "", knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to add knot: {str(e)}")
 
     def update_knot(self, knot: Knot) -> bool:
-        """
-        Update an existing knot.
+        """Update an existing knot."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, fake_pith = ? WHERE id_nodo = ?",
+                    (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith, knot.knot_no)
+                )
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to update knot: {str(e)}")
 
-        Args:
-            knot: Knot instance with updated data
+    def delete_knot(self, knot_id: str, board_id: str, project_id: str) -> bool:
+        """Delete a knot."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM knot WHERE id_nodo = ?", (knot_id,))
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to delete knot: {str(e)}")
 
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        pass
+    def knot_exists(self, knot_id: str, board_id: str, project_id: str) -> bool:
+        """Check if a knot exists."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1 FROM knot WHERE id_nodo = ? LIMIT 1", (knot_id,))
+                return cursor.fetchone() is not None
+        except:
+            return False
 
-    def delete_knot(self, knot_id: int, board_id: int,
-                   project_id: str) -> bool:
-        """
-        Delete a knot.
 
-        Args:
-            knot_id: Knot ID to delete
-            board_id: Board ID (composite key)
-            project_id: Project ID (composite key)
-
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        pass
-
-    def knot_exists(self, knot_id: int, board_id: int,
-                   project_id: str) -> bool:
-        """
-        Check if a knot exists.
-
-        Args:
-            knot_id: Knot ID to check
-            board_id: Board ID (composite key)
-            project_id: Project ID (composite key)
-
-        Returns:
-            bool: True if exists, False otherwise
-        """
-        pass
 
 
 # ==================== USAGE EXAMPLE ====================

@@ -1,25 +1,35 @@
+"""
+MVVM Architecture Application Entry Point.
+
+This is the main entry point for the LocalKnot application.
+It creates a QApplication, applies styling, and launches MainWindow.
+
+MainWindow handles all MVVM component initialization:
+- Database setup (DatabaseManager)
+- Repository creation (ProjectRepository, BoardRepository, KnotRepository)
+- ViewModel instantiation (ProjectsViewModel, BoardsViewModel, KnotsViewModel)
+- View creation and Signal/Slot binding (ProjectsView, BoardsView, KnotsView)
+"""
+
 import sys
 from PySide6.QtWidgets import QApplication
-from gui.main_window import MainWindow
-from controllers.data_panel_controller import ProjectsController, BoardsController, KnotsController
 from gui.main_window import MainWindow
 
 
 def main():
-    """Application entry point."""
+    """Application entry point - MVVM Architecture."""
     app = QApplication(sys.argv)
 
-    # esperimento, fa cagare non considerare
-    stile_globale = """
+    # Apply global stylesheet
+    stylesheet = """
         QMainWindow {
-            background-color: #734F28;
+            background-color: #F59D67;
         }
         QGroupBox {
             background-color: #BD8142;
-            color: #663F18;
+            color: #824300;
             border-radius: 10px;
-            padding: 10px, 0;
-            
+            padding: 10px;
         }
         QPushButton {
             background-color: #824300;
@@ -27,28 +37,24 @@ def main():
             padding: 5px;
             border-radius: 10px;
         }
-         QPushButton:hover {
+        QPushButton:hover {
             color: yellow;
         }
         QPushButton:pressed {
-                background-color: #A85C0A;
-                padding-left: 7px; /* Slight movement effect */
-                padding-top: 7px;
+            background-color: #A85C0A;
+            padding-left: 7px;
+            padding-top: 7px;
         }
         QLabel {
-            color: #663F18;
+            color: #824300;
         }
     """
-    app.setStyleSheet(stile_globale)
+    app.setStyleSheet(stylesheet)
 
+    # Create and show main window
     window = MainWindow()
-
-    # Instantiate the controllers
-    projects_controller = ProjectsController(window.data_panel, window.hidden_data_panel)
-    boards_controller = BoardsController(window.data_panel, window.hidden_data_panel)
-    knots_controller = KnotsController(window.data_panel, window.hidden_data_panel)
-
     window.show()
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":

@@ -23,7 +23,8 @@ class Project:
             name: Project identifier
             species: Species associated with the project
         """
-        pass
+        self.name = name
+        self.species = species
 
     def validate_name(self, name: str) -> bool:
         """
@@ -35,15 +36,17 @@ class Project:
         Returns:
             bool: True if valid, False otherwise
         """
-        pass
+        return bool(name and name.strip())
 
     def __eq__(self, other):
         """Compare two projects by name."""
-        pass
+        if not isinstance(other, Project):
+            return False
+        return self.name == other.name
 
     def __repr__(self):
         """String representation of the project."""
-        pass
+        return f"Project(name='{self.name}', species='{self.species}')"
 
 
 class Species:
@@ -61,7 +64,7 @@ class Species:
         Args:
             name: Species identifier
         """
-        pass
+        self.name = name
 
     def validate_name(self, name: str) -> bool:
         """
@@ -73,11 +76,13 @@ class Species:
         Returns:
             bool: True if valid, False otherwise
         """
-        pass
+        return bool(name and name.strip())
 
     def __eq__(self, other):
         """Compare two species by name."""
-        pass
+        if not isinstance(other, Species):
+            return False
+        return self.name == other.name
 
 
 class Board:
@@ -107,7 +112,12 @@ class Board:
             test_position: Test position reference
             comment: Additional notes
         """
-        pass
+        self.board_no = board_no
+        self.height = height
+        self.base = base
+        self.length = length
+        self.test_position = test_position
+        self.comment = comment
 
     def validate_measurements(self) -> bool:
         """
@@ -116,7 +126,7 @@ class Board:
         Returns:
             bool: True if valid, False otherwise
         """
-        pass
+        return self.height >= 0 and self.base >= 0 and self.length >= 0
 
 
 class Knot:
@@ -146,7 +156,12 @@ class Knot:
             is_fake_pith: Whether pith is fake
             comment: Additional notes
         """
-        pass
+        self.knot_no = knot_no
+        self.x = x
+        self.pith_z = pith_z
+        self.pith_y = pith_y
+        self.is_fake_pith = is_fake_pith
+        self.comment = comment
 
     def validate_coordinates(self) -> bool:
         """
@@ -155,5 +170,7 @@ class Knot:
         Returns:
             bool: True if valid, False otherwise
         """
-        pass
+        return isinstance(self.x, (int, float)) and \
+               isinstance(self.pith_z, (int, float)) and \
+               isinstance(self.pith_y, (int, float))
 

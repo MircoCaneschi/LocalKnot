@@ -11,23 +11,41 @@ class DatabaseManager:
 
     @staticmethod
     def _get_db_path(db_name):
-        app_name = "KnotCalc"
+        """
+        Determines the database path using a hybrid approach:
+        1. Try to use a 'data' folder in the project root (Portable mode).
+        2. Fall back to the system's standard AppData/Application Support if the local path isn't writable.
+        """
+        # 1. Try Local Project Path (Portable)
+        try:
+            project_root = Path(__file__).resolve().parent.parent
+            local_data_dir = project_root / "data"
+            
+            # Ensure directory exists
+            local_data_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Test writability by creating a temporary file
+            test_file = local_data_dir / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            
+            return local_data_dir / db_name
+            
+        except (OSError, PermissionError):
+            # 2. Fallback to System Standard Path (Standard Installation)
+            app_name = "KnotCalc"
+            
+            if platform.system() == 'Windows':
+                base_dir = Path(os.getenv('LOCALAPPDATA', os.path.expanduser('~')))
+            elif platform.system() == 'Darwin':  # macOS
+                base_dir = Path(os.path.expanduser('~/Library/Application Support'))
+            else:  # Linux/Unix
+                base_dir = Path(os.path.expanduser('~/.local/share'))
 
-        # Determine the standard user data directory based on the OS
-        if platform.system() == 'Windows':
-            base_dir = Path(os.getenv('LOCALAPPDATA', os.path.expanduser('~')))
-        elif platform.system() == 'Darwin':  # macOS
-            base_dir = Path(os.path.expanduser('~/Library/Application Support'))
-        else:  # Linux/Unix
-            base_dir = Path(os.path.expanduser('~/.local/share'))
-
-        # Create the full path
-        app_dir = base_dir / app_name
-
-        # Create the folder if it does not exist
-        app_dir.mkdir(parents=True, exist_ok=True)
-
-        return app_dir / db_name
+            app_dir = base_dir / app_name
+            app_dir.mkdir(parents=True, exist_ok=True)
+            
+            return app_dir / db_name
 
     def get_connection(self):
         # Use the dynamic path
@@ -59,6 +77,7 @@ class DatabaseManager:
                     base REAL NOT NULL,
                     length INTEGER NOT NULL,
                     testpos INTEGER ,
+                    comment TEXT,
                     image_path TEXT,
                     PRIMARY KEY (id_board, id_project),
                     FOREIGN KEY (id_project) REFERENCES project (id_project) ON DELETE CASCADE
