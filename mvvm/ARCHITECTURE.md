@@ -383,40 +383,6 @@ Dependencies allowed:
 
 
 ================================================================================
-IMPLEMENTATION CHECKLIST
-================================================================================
-
-To implement a new feature following MVVM:
-
-1. MODEL
-   ─────
-   □ Create data class (e.g., class Project)
-   □ Implement validation methods
-   □ NO UI imports
-   □ NO ViewModel imports
-
-2. VIEWMODEL
-   ─────────
-   □ Create QObject subclass (e.g., ProjectsViewModel(QObject))
-   □ Define Signals for state changes
-   □ Define Properties with @Property decorator
-   □ Implement Slots for user actions (@Slot decorator)
-   □ Connect internal signals within implementations
-   □ NO QtWidgets imports
-   □ NO direct UI manipulation
-
-3. VIEW
-   ────
-   □ Create View class that accepts ViewModel
-   □ Create UI widgets (buttons, combo boxes, etc.)
-   □ Implement _bind_to_view_model() method
-   □ Connect widget signals to ViewModel slots
-   □ Connect ViewModel signals to view update slots
-   □ Create signal handlers for ViewModel notifications
-   □ Keep all business logic out
-
-
-================================================================================
 COMMON MISTAKES TO AVOID
 ================================================================================
 
