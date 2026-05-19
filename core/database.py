@@ -59,14 +59,28 @@ class DatabaseManager:
         with self.get_connection() as conn:
             cursor = conn.cursor()
 
-            # project table
+            # species table (NEW)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS species (
+                    name TEXT PRIMARY KEY
+                )
+            ''')
+
+            # project table (UPDATED with Foreign Key)
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS project (
                     id_project TEXT PRIMARY KEY,
                     species TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (species) REFERENCES species (name) ON UPDATE CASCADE
                 )
             ''')
+
+            # Check if we need to migrate existing species from project to species table
+            cursor.execute("SELECT DISTINCT species FROM project")
+            existing_species = cursor.fetchall()
+            for row in existing_species:
+                cursor.execute("INSERT OR IGNORE INTO species (name) VALUES (?)", (row[0],))
 
             # BOARD table
             cursor.execute('''

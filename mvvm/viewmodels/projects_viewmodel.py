@@ -347,13 +347,24 @@ class ProjectsViewModel(QObject):
             self.project_error.emit(f"Failed to load projects: {str(e)}")
 
     def _load_species_from_db(self):
-        """Load species from all projects in database."""
+        """Load species from the dedicated species table."""
         try:
-            species_set = set()
-            for project in self._projects:
-                if project.species:
-                    species_set.add(project.species)
-            self._species = sorted(list(species_set))
+            self._species = self.repo.get_all_species()
             self.species_changed.emit(self._species)
         except Exception as e:
             self.species_error.emit(f"Failed to load species: {str(e)}")
+
+    @Slot(str)
+    def handle_add_species_direct(self, species_name: str):
+        """
+        Actually add a species to the database (called after validation).
+        """
+        try:
+            if self.repo.add_species(species_name):
+                if species_name not in self._species:
+                    self._species.append(species_name)
+                    self._species.sort()
+                    self.species_changed.emit(self._species)
+                    self.species_added.emit(f"Species {species_name} added!")
+        except Exception as e:
+            self.species_error.emit(f"Failed to add species: {str(e)}")

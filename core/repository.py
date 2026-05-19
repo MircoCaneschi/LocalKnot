@@ -76,6 +76,7 @@ class ProjectRepository:
     def add_project(self, project: Project) -> bool:
         """
         Add a new project to database.
+        Ensures species exists in the species table first.
 
         Args:
             project: Project instance to add
@@ -86,6 +87,9 @@ class ProjectRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
+                # Ensure species exists
+                cursor.execute("INSERT OR IGNORE INTO species (name) VALUES (?)", (project.species,))
+                
                 cursor.execute(
                     "INSERT INTO project (id_project, species) VALUES (?, ?)",
                     (project.name, project.species)
@@ -98,6 +102,7 @@ class ProjectRepository:
     def update_project(self, old_project_name: str, project: Project) -> bool:
         """
         Update an existing project and cascade renaming if necessary.
+        Ensures species exists in the species table first.
 
         Args:
             old_project_name: The original name of the project
@@ -109,6 +114,9 @@ class ProjectRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
+                # Ensure species exists
+                cursor.execute("INSERT OR IGNORE INTO species (name) VALUES (?)", (project.species,))
+
                 if old_project_name != project.name:
                     # Rename project and manually cascade to boards and knots
                     cursor.execute(
@@ -133,6 +141,28 @@ class ProjectRepository:
             return True
         except Exception as e:
             raise Exception(f"Failed to update project: {str(e)}")
+
+    def get_all_species(self) -> List[str]:
+        """Get all species names from the species table."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT name FROM species ORDER BY name ASC")
+                rows = cursor.fetchall()
+                return [row[0] for row in rows]
+        except Exception as e:
+            raise Exception(f"Failed to get species: {str(e)}")
+
+    def add_species(self, species_name: str) -> bool:
+        """Add a new species to the species table."""
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("INSERT OR IGNORE INTO species (name) VALUES (?)", (species_name,))
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to add species: {str(e)}")
 
     def delete_project(self, project_id: str) -> bool:
         """
