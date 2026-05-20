@@ -131,12 +131,13 @@ class ProjectsViewModel(QObject):
             self._current_project = value
             self.current_project_changed.emit(value)
 
-            #changing the species associated with the project
-            matching_project = next((p for p in self._projects if p.name == value), None)
+            # Only auto-change the associated species if we are navigating (not editing/creating)
+            if not self._project_editable:
+                matching_project = next((p for p in self._projects if p.name == value), None)
 
-            if matching_project:
-                self._current_species = matching_project.species
-                self.current_species_changed.emit(self._current_species)
+                if matching_project:
+                    self._current_species = matching_project.species
+                    self.current_species_changed.emit(self._current_species)
 
     @Property(str, notify=current_species_changed)
     def current_species(self) -> str:
@@ -169,7 +170,6 @@ class ProjectsViewModel(QObject):
         - Hides previous messages
         """
         self._is_modifying = False
-        self.project_modify_mode.emit(False)
         self.navigation_enabled_changed.emit(False)
 
         # 1. Make editable FIRST so the UI accepts custom/empty text
@@ -186,6 +186,9 @@ class ProjectsViewModel(QObject):
 
         self._current_species = ""
         self.current_species_changed.emit("")
+
+        # 3. Trigger modify mode to restrict combo box dropdown
+        self.project_modify_mode.emit(True)
 
     @Slot()
     def handle_save_project(self):
@@ -285,18 +288,34 @@ class ProjectsViewModel(QObject):
         self._current_species = ""
         self.current_species_changed.emit("")
 
-    @Slot(str)
-    def handle_delete_project(self, project_name: str):
+    @Slot()
+    def handle_delete_project(self):
         """
         Slot called when user clicks 'Delete Project' button.
-
-        Args:
-            project_name: Name of project to delete
+        Deletes the currently selected project.
         """
+        project_to_delete = self._current_project
+        if not project_to_delete:
+            return
+
         try:
-            if self.repo.delete_project(project_name):
-                self._projects = [p for p in self._projects if p.name != project_name]
+            if self.repo.delete_project(project_to_delete):
+                # Update internal list
+                self._projects = [p for p in self._projects if p.name != project_to_delete]
                 self.projects_changed.emit(self.project_list)
+                
+                # Update current project selection
+                if self._projects:
+                    # Select the first available project
+                    new_project = self._projects[0]
+                    self.current_project = new_project.name
+                    self.current_species = new_project.species
+                else:
+                    # No projects left
+                    self.current_project = ""
+                    self.current_species = ""
+                
+                self.project_saved.emit(f"Project {project_to_delete} deleted.")
         except Exception as e:
             self.project_error.emit(f"Failed to delete project: {str(e)}")
 

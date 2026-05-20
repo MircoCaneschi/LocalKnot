@@ -15,9 +15,10 @@ Data Flow:
 
 from PySide6.QtWidgets import (
     QHBoxLayout, QPushButton, QLabel, QComboBox, QVBoxLayout,
-    QSizePolicy, QSpacerItem, QFormLayout
+    QSizePolicy, QSpacerItem, QFormLayout, QMessageBox, QStyle
 )
 from PySide6.QtCore import Qt, QObject, QEvent
+from pyside6helpers import icons
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import ProjectsViewModel
@@ -72,7 +73,11 @@ class ProjectsView:
         # Combo boxes
         self.combo_box_projects = None
         self.combo_box_species = None
+        self.toggle_species_btns_btn = None
+        self.species_btns_container = None
         self.add_species_btn = None
+        self.modify_species_btn = None
+        self.delete_species_btn = None
 
         # Navigation buttons
         self.right_shift_btn = None
@@ -144,12 +149,39 @@ class ProjectsView:
         species_layout = QHBoxLayout()
         self.combo_box_species = QComboBox()
         self.combo_box_species.setEditable(False)
-        self.add_species_btn = QPushButton("+")
-        self.add_species_btn.setMaximumWidth(30)
-        self.add_species_btn.setMinimumWidth(30)
         self.combo_box_species.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        
+        # Toggle button for species actions
+        self.toggle_species_btns_btn = QPushButton()
+        self.toggle_species_btns_btn.setMaximumWidth(20)
+        self.toggle_species_btns_btn.setMinimumWidth(20)
+        self.toggle_species_btns_btn.setIcon(icons.menu())
+        
+        # Species buttons container
+        from PySide6.QtWidgets import QWidget
+        self.species_btns_container = QWidget()
+        self.species_btns_container.hide()
+        species_btns_layout = QHBoxLayout(self.species_btns_container)
+        species_btns_layout.setContentsMargins(0, 0, 0, 0)
+        species_btns_layout.setSpacing(2)
+        
+        self.add_species_btn = QPushButton()
+        self.modify_species_btn = QPushButton()
+        self.delete_species_btn = QPushButton()
+        
+        # Icons from pyside6helpers
+        self.add_species_btn.setIcon(icons.plus())
+        self.modify_species_btn.setIcon(icons.pencil())
+        self.delete_species_btn.setIcon(icons.trash())
+        
+        for btn in [self.add_species_btn, self.modify_species_btn, self.delete_species_btn]:
+            btn.setMaximumWidth(30)
+            btn.setMinimumWidth(30)
+            species_btns_layout.addWidget(btn)
+        
         species_layout.addWidget(self.combo_box_species)
-        species_layout.addWidget(self.add_species_btn)
+        species_layout.addWidget(self.toggle_species_btns_btn)
+        species_layout.addWidget(self.species_btns_container)
         species_layout.setSpacing(2)
 
         # Messages
@@ -218,6 +250,8 @@ class ProjectsView:
         self.save_btn.clicked.connect(self.view_model.handle_save_project)
         self.add_species_btn.clicked.connect(self.view_model.handle_add_species)
         self.change_name_btn.clicked.connect(self.view_model.handle_modify_project)
+        self.delete_btn.clicked.connect(self._on_delete_clicked)
+        self.toggle_species_btns_btn.clicked.connect(self._toggle_species_btns)
         
         # Focus handling
         self.new_btn.clicked.connect(lambda: self.combo_box_projects.setFocus())
@@ -259,8 +293,7 @@ class ProjectsView:
         self.view_model.species_added.connect(self._on_species_added)
         
         # Sync Current Text (Main and Hidden)
-        self.view_model.current_species_changed.connect(self.combo_box_species.setCurrentText)
-        self.view_model.current_species_changed.connect(self.hidden_combo_box_species.setCurrentText)
+        self.view_model.current_species_changed.connect(self._on_current_species_changed)
         
         self.view_model.current_project_changed.connect(self.combo_box_projects.setCurrentText)
         self.view_model.current_project_changed.connect(self.hidden_combo_box_projects.setCurrentText)
@@ -437,13 +470,15 @@ class ProjectsView:
 
     def set_species_enabled(self, state: bool):
         """
-        Enable or disable the species selection.
+        Enable or disable the species selection and management buttons.
         Instead of setEnabled(False) which fades the widget, we use an event filter
         to block interaction while keeping the visual state sharp.
         """
         self.species_filter.is_enabled = state
         self.hidden_species_filter.is_enabled = state
         self.add_species_btn.setEnabled(state)
+        self.modify_species_btn.setEnabled(state)
+        self.delete_species_btn.setEnabled(state)
 
     def _on_navigation_enabled_changed(self, enabled: bool):
         """Enable or disable navigation buttons (New, Modify, Delete)."""
@@ -457,3 +492,39 @@ class ProjectsView:
         # read the species and update the UI
         nuova_specie = self.view_model.current_species
         self.combo_box_species.setCurrentText(nuova_specie)
+
+    def _on_delete_clicked(self):
+        """Handle delete button click with confirmation."""
+        project_name = self.view_model.current_project
+        if not project_name:
+            return
+
+        reply = QMessageBox.question(
+            self.delete_btn.window(), 'Delete Project',
+            f"Are you sure you want to delete project '{project_name}'?\n"
+            "This will also delete all associated boards and knots.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.view_model.handle_delete_project()
+
+    def _on_current_species_changed(self, text: str):
+        """Update species combo boxes. If text is empty, clear selection."""
+        if not text:
+            self.combo_box_species.setCurrentIndex(-1)
+            self.hidden_combo_box_species.setCurrentIndex(-1)
+        else:
+            self.combo_box_species.setCurrentText(text)
+            self.hidden_combo_box_species.setCurrentText(text)
+
+    def _toggle_species_btns(self):
+        """Toggle the visibility of species action buttons."""
+        is_visible = self.species_btns_container.isVisible()
+        self.species_btns_container.setVisible(not is_visible)
+        
+        # Update icon from pyside6helpers
+        if is_visible:
+            self.toggle_species_btns_btn.setIcon(icons.menu())
+        else:
+            self.toggle_species_btns_btn.setIcon(icons.menu())

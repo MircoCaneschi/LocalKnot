@@ -12,6 +12,13 @@ MainWindow handles all MVVM component initialization:
 """
 
 import sys
+import os
+from pathlib import Path
+
+# Add the project root directory to the Python path
+project_root = Path(__file__).resolve().parent
+sys.path.insert(0, str(project_root))
+
 from PySide6.QtWidgets import QApplication
 from gui.main_window import MainWindow
 

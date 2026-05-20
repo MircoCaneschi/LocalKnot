@@ -70,6 +70,9 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.data_panel_container)
 
+        # Connect signals for updating counters
+        self.projects_vm.projects_changed.connect(self._update_project_counter)
+
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()
         self.hidden_data_panel_layout = QHBoxLayout(self.hidden_data_panel_container)
@@ -112,3 +115,9 @@ class MainWindow(QMainWindow):
         else:
             self.hidden_data_panel_container.hide()
             self.data_panel_container.show()
+
+    def _update_project_counter(self, projects: list):
+        """Update the counter in the project group box title."""
+        count = len(projects)
+        self.project_group.setTitle(f"Projects[{count}]")
+        self.hidden_project_group.setTitle(f"Projects[{count}]")
