@@ -30,13 +30,34 @@ class SpeciesInteractionFilter(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.is_enabled = False
+        self.is_editing_inline = False
 
     def eventFilter(self, obj, event):
+        # 1. In-Line Editing Mode: Allow typing, block dropdown popup
+        if self.is_editing_inline:
+            if event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseButtonDblClick]:
+                if isinstance(obj, QComboBox) and obj.isEditable():
+                    # Allow clicks ONLY if they are inside the lineEdit area (for cursor/focus)
+                    if obj.lineEdit().geometry().contains(event.pos()):
+                        return False
+                # Block clicks on the arrow/button area
+                return True
+            
+            if event.type() == QEvent.KeyPress:
+                # Block keys that navigate or open the popup
+                if event.key() in [Qt.Key_Up, Qt.Key_Down, Qt.Key_F4]:
+                    return True
+                # Allow all other keys (character input, backspace, enter, etc.)
+                return False
+            return False
+
+        # 2. Locked Mode (Navigation): Block all interactions
         if not self.is_enabled:
-            # Block mouse clicks and key presses that open the combo box
             if event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease, 
                                QEvent.MouseButtonDblClick, QEvent.KeyPress]:
                 return True
+        
+        # 3. Enabled Mode: Normal behavior
         return super().eventFilter(obj, event)
 
 
@@ -96,6 +117,9 @@ class ProjectsView:
         self.hidden_combo_box_species = None
         self.hidden_right_shift_btn = None
         self.hidden_left_shift_btn = None
+        
+        # State tracking
+        self._species_menu_open = False
 
         # Setup UI
         self._setup_main_layout()
@@ -597,10 +621,18 @@ class ProjectsView:
         # In In-Line mode, the combo box becomes editable but stays visible
         self.combo_box_species.setEditable(not is_normal)
         
+        # Update filter flags
+        self.species_filter.is_editing_inline = not is_normal
+        self.hidden_species_filter.is_editing_inline = not is_normal
+        
         if not is_normal:
+            # Focus and select text for immediate typing
             self.combo_box_species.setFocus()
             if self.combo_box_species.lineEdit():
                 self.combo_box_species.lineEdit().selectAll()
+        else:
+            # Revert to project-based interaction state when returning to normal mode
+            self.set_species_enabled(self.view_model._project_editable)
 
     def _on_species_combo_text_changed(self, text: str):
         """Update ViewModel when combo box selection changes."""

@@ -212,6 +212,8 @@ class ProjectsViewModel(QObject):
         """
         Slot called when user clicks 'Save Project' button.
         """
+        # If we are in the middle of an in-line species edit, we should save that first
+        # or at least use the text currently in the field.
         project_text = self._current_project.strip()
         species_text = self._current_species.strip()
 
@@ -237,11 +239,35 @@ class ProjectsViewModel(QObject):
             self.species_error.emit("Species cannot be empty!")
             return
 
+        # If we are NOT in species editable mode (normal mode), 
+        # ensure the species actually exists in the list
         if not self._species_editable and species_text not in self._species:
             self.species_error.emit("Please select a valid species!")
             return
 
         try:
+            # If we WERE in species edit mode (In-Line), we might need to finalize the species record first
+            if self._species_editable:
+                # This logic mimics handle_save_species_edit but integrated here
+                old_name = self._original_species_name
+                new_name = species_text
+                
+                if old_name and old_name != new_name:
+                    # Renaming existing species
+                    if self.repo.update_species(old_name, new_name):
+                        self._species = [new_name if s == old_name else s for s in self._species]
+                        self._species.sort()
+                        self.species_changed.emit(self._species)
+                        for p in self._projects:
+                            if p.species == old_name:
+                                p.species = new_name
+                elif not old_name and new_name not in self._species:
+                    # Adding new species
+                    if self.repo.add_species(new_name):
+                        self._species.append(new_name)
+                        self._species.sort()
+                        self.species_changed.emit(self._species)
+
             # Create and save project
             project = Project(name=project_text, species=species_text)
             
@@ -258,7 +284,7 @@ class ProjectsViewModel(QObject):
                     self._projects.append(project)
                     self.project_saved.emit(f"{project_text} registered!")
 
-            # Add species if it's new
+            # Add species if it's new (fallback/safety)
             if species_text not in self._species:
                 self._species.append(species_text)
                 self._species.sort()
@@ -276,6 +302,7 @@ class ProjectsViewModel(QObject):
             self._species_editable = False
             self.project_editable_changed.emit(False)
             self.species_editable_changed.emit(False)
+            self.species_normal_mode_changed.emit(True)
             
             self._update_species_actions_state()
             self.save_enabled_changed.emit(False)
