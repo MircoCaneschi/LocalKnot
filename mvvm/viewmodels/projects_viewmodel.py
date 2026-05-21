@@ -63,6 +63,14 @@ class ProjectsViewModel(QObject):
     # Emitted to enable or disable the species combo box (interaction)
     species_enabled_changed = Signal(bool)
 
+    # Emitted to signal species management mode (Normal=True, In-Line=False)
+    species_normal_mode_changed = Signal(bool)
+
+    # Emitted to enable/disable specific species actions
+    species_add_enabled = Signal(bool)
+    species_modify_enabled = Signal(bool)
+    species_delete_enabled = Signal(bool)
+
     # Emitted to enable or disable the save button
     save_enabled_changed = Signal(bool)
 
@@ -99,7 +107,10 @@ class ProjectsViewModel(QObject):
         # Initial states
         self.save_enabled_changed.emit(False)
         self.navigation_enabled_changed.emit(True)
-        self.species_enabled_changed.emit(False)
+        
+        # Species management initialization
+        self.species_normal_mode_changed.emit(True)
+        self._update_species_actions_state()
 
     # ==================== PROPERTIES ====================
 
@@ -154,6 +165,7 @@ class ProjectsViewModel(QObject):
         if self._current_species != value:
             self._current_species = value
             self.current_species_changed.emit(value)
+            self._update_species_actions_state()
 
     @Property(bool)
     def species_editable(self) -> bool:
@@ -180,8 +192,8 @@ class ProjectsViewModel(QObject):
         self._project_editable = True
         self.project_editable_changed.emit(self._project_editable)
 
-        # Enable species selection
-        self.species_enabled_changed.emit(True)
+        # Update species actions state (enables selection and + button)
+        self._update_species_actions_state()
         self.save_enabled_changed.emit(True)
 
         # 2. Set internal state and emit changes to clear UI
@@ -265,7 +277,7 @@ class ProjectsViewModel(QObject):
             self.project_editable_changed.emit(False)
             self.species_editable_changed.emit(False)
             
-            self.species_enabled_changed.emit(False)
+            self._update_species_actions_state()
             self.save_enabled_changed.emit(False)
             self.navigation_enabled_changed.emit(True)
             
@@ -279,8 +291,7 @@ class ProjectsViewModel(QObject):
     def handle_modify_species(self):
         """
         Slot called when user clicks 'Modify Species' button.
-        This prepares the UI for renaming a species.
-        Actual renaming logic is handled in handle_save_project or a dedicated slot.
+        This prepares the UI for renaming a species in In-Line mode.
         """
         if not self._current_species:
             return
@@ -290,19 +301,87 @@ class ProjectsViewModel(QObject):
 
         # Prepare for modification
         self._species_editable = True
+        self.species_normal_mode_changed.emit(False)
         self.species_editable_changed.emit(True)
-        # We don't clear the field because we want to edit the existing name
 
     @Slot()
     def handle_add_species(self):
         """
         Slot called when user clicks 'Add Species' button.
-        Prepares UI for adding a new species.
+        Prepares UI for adding a new species in In-Line mode.
         """
         self._original_species_name = ""  # New species mode
         self._species_editable = True
+        self.species_normal_mode_changed.emit(False)
         self.species_editable_changed.emit(True)
         self.current_species = ""
+
+    @Slot()
+    def handle_cancel_species_edit(self):
+        """
+        Cancel the current species add/modify operation.
+        """
+        self._species_editable = False
+        self.current_species = self._original_species_name
+        self.species_normal_mode_changed.emit(True)
+        self.species_editable_changed.emit(False)
+        self._update_species_actions_state()
+
+    @Slot()
+    def handle_save_species_edit(self):
+        """
+        Save the current species add/modify operation from In-Line mode.
+        """
+        new_name = self._current_species.strip()
+        old_name = self._original_species_name
+
+        if not new_name:
+            self.species_error.emit("Species name cannot be empty!")
+            return
+
+        # If it's a rename and name hasn't changed, just exit
+        if old_name and old_name == new_name:
+            self.handle_cancel_species_edit()
+            return
+
+        # If it's new and already exists, error
+        if not old_name and new_name in self._species:
+            self.species_error.emit("Species already exists!")
+            return
+
+        try:
+            if not old_name:
+                # Add new species
+                if self.repo.add_species(new_name):
+                    self._species.append(new_name)
+                    self._species.sort()
+                    self.species_changed.emit(self._species)
+                    self.species_added.emit(f"Species {new_name} added!")
+            else:
+                # Update existing species
+                if self.repo.update_species(old_name, new_name):
+                    # Update internal species list
+                    self._species = [new_name if s == old_name else s for s in self._species]
+                    self._species.sort()
+                    self.species_changed.emit(self._species)
+                    
+                    # Update current projects list (species name changed)
+                    for p in self._projects:
+                        if p.species == old_name:
+                            p.species = new_name
+                    
+                    self.species_added.emit(f"Species renamed to {new_name}!")
+            
+            # Success: update current and exit edit mode
+            self._current_species = new_name
+            self.current_species_changed.emit(new_name)
+            self._species_editable = False
+            self.species_normal_mode_changed.emit(True)
+            self.species_editable_changed.emit(False)
+            self._update_species_actions_state()
+
+        except Exception as e:
+            self.species_error.emit(f"Error saving species: {str(e)}")
 
     @Slot(str, str)
     def handle_confirm_modify_species(self, old_name: str, new_name: str):
@@ -401,6 +480,7 @@ class ProjectsViewModel(QObject):
                     self.current_species = ""
                 
                 self.species_added.emit(f"Species {species_to_delete} deleted.")
+                self._update_species_actions_state()
         except Exception as e:
             self.species_error.emit(f"Failed to delete species: {str(e)}")
 
@@ -422,11 +502,28 @@ class ProjectsViewModel(QObject):
         self._project_editable = True
         self.project_editable_changed.emit(True)
 
-        self.species_enabled_changed.emit(True)
+        # Update species actions state (enables selection and + button)
+        self._update_species_actions_state()
+        
         self.save_enabled_changed.emit(True)
         self.navigation_enabled_changed.emit(False)
 
     # ==================== PRIVATE METHODS ====================
+
+    def _update_species_actions_state(self):
+        """Update the enabled state of species actions based on current selection and project state."""
+        has_selection = bool(self._current_species)
+        is_project_editing = self._project_editable
+        
+        # 1. Pencil (Modify) is always enabled if a species is selected
+        self.species_modify_enabled.emit(has_selection)
+        
+        # 2. Add (+) and Delete (Trash) are enabled only during project editing
+        self.species_add_enabled.emit(is_project_editing)
+        self.species_delete_enabled.emit(is_project_editing and has_selection)
+        
+        # 3. ComboBox interaction is enabled only during project editing
+        self.species_enabled_changed.emit(is_project_editing)
 
     def _load_projects_from_db(self):
         """Load projects from database."""

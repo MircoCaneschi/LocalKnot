@@ -15,7 +15,8 @@ Data Flow:
 
 from PySide6.QtWidgets import (
     QHBoxLayout, QPushButton, QLabel, QComboBox, QVBoxLayout,
-    QSizePolicy, QSpacerItem, QFormLayout, QMessageBox, QStyle
+    QSizePolicy, QSpacerItem, QFormLayout, QMessageBox, QStyle, QLineEdit,
+    QWidget
 )
 from PySide6.QtCore import Qt, QObject, QEvent
 from pyside6helpers import icons
@@ -73,11 +74,14 @@ class ProjectsView:
         # Combo boxes
         self.combo_box_projects = None
         self.combo_box_species = None
-        self.toggle_species_btns_btn = None
-        self.species_btns_container = None
+        self.species_line_edit = None
         self.add_species_btn = None
         self.modify_species_btn = None
         self.delete_species_btn = None
+        self.save_species_btn = None
+        self.cancel_species_btn = None
+        self.species_btns_container = None
+        self.species_edit_btns_container = None
 
         # Navigation buttons
         self.right_shift_btn = None
@@ -150,20 +154,18 @@ class ProjectsView:
         self.combo_box_species = QComboBox()
         self.combo_box_species.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         
-        # To connect the return key, the combobox needs an internal lineEdit.
-        # We must make it editable temporarily to instantiate the lineEdit.
+        # Connect returnPressed of the internal lineEdit to save action
         self.combo_box_species.setEditable(True)
-        self.combo_box_species.lineEdit().returnPressed.connect(self._on_species_rename_confirmed)
+        self.combo_box_species.lineEdit().returnPressed.connect(self.view_model.handle_save_species_edit)
         self.combo_box_species.setEditable(False)
         
-        # Toggle button for species actions
+        # Toggle button for species actions (Normal Mode)
         self.toggle_species_btns_btn = QPushButton()
         self.toggle_species_btns_btn.setMaximumWidth(20)
         self.toggle_species_btns_btn.setMinimumWidth(20)
         self.toggle_species_btns_btn.setIcon(icons.menu())
-        
-        # Species buttons container
-        from PySide6.QtWidgets import QWidget
+
+        # Species buttons container (Normal Mode)
         self.species_btns_container = QWidget()
         self.species_btns_container.hide()
         species_btns_layout = QHBoxLayout(self.species_btns_container)
@@ -174,7 +176,6 @@ class ProjectsView:
         self.modify_species_btn = QPushButton()
         self.delete_species_btn = QPushButton()
         
-        # Icons from pyside6helpers
         self.add_species_btn.setIcon(icons.plus())
         self.modify_species_btn.setIcon(icons.pencil())
         self.delete_species_btn.setIcon(icons.trash())
@@ -183,10 +184,32 @@ class ProjectsView:
             btn.setMaximumWidth(30)
             btn.setMinimumWidth(30)
             species_btns_layout.addWidget(btn)
+
+        # Species edit buttons container (In-Line Mode)
+        self.species_edit_btns_container = QWidget()
+        self.species_edit_btns_container.hide()
+        species_edit_btns_layout = QHBoxLayout(self.species_edit_btns_container)
+        species_edit_btns_layout.setContentsMargins(0, 0, 0, 0)
+        species_edit_btns_layout.setSpacing(2)
+
+        self.save_species_btn = QPushButton()
+        self.cancel_species_btn = QPushButton()
+        
+        self.save_species_btn.setIcon(icons.check())
+        self.cancel_species_btn.setIcon(icons.cancel())
+        
+        self.save_species_btn.setStyleSheet("QPushButton { color: green; }")
+        self.cancel_species_btn.setStyleSheet("QPushButton { color: red; }")
+
+        for btn in [self.save_species_btn, self.cancel_species_btn]:
+            btn.setMaximumWidth(30)
+            btn.setMinimumWidth(30)
+            species_edit_btns_layout.addWidget(btn)
         
         species_layout.addWidget(self.combo_box_species)
         species_layout.addWidget(self.toggle_species_btns_btn)
         species_layout.addWidget(self.species_btns_container)
+        species_layout.addWidget(self.species_edit_btns_container)
         species_layout.setSpacing(2)
 
         # Messages
@@ -253,12 +276,17 @@ class ProjectsView:
         # Button clicks → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_project)
         self.save_btn.clicked.connect(self.view_model.handle_save_project)
+        
+        # Species management clicks
         self.add_species_btn.clicked.connect(self.view_model.handle_add_species)
         self.modify_species_btn.clicked.connect(self.view_model.handle_modify_species)
         self.delete_species_btn.clicked.connect(self._on_delete_species_clicked)
+        self.save_species_btn.clicked.connect(self.view_model.handle_save_species_edit)
+        self.cancel_species_btn.clicked.connect(self.view_model.handle_cancel_species_edit)
+        self.toggle_species_btns_btn.clicked.connect(self._toggle_species_btns)
+
         self.change_name_btn.clicked.connect(self.view_model.handle_modify_project)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
-        self.toggle_species_btns_btn.clicked.connect(self._toggle_species_btns)
         
         # Focus handling
         self.new_btn.clicked.connect(lambda: self.combo_box_projects.setFocus())
@@ -272,7 +300,7 @@ class ProjectsView:
                 lambda text: setattr(self.view_model, 'current_project', text)
             )
         
-        self.combo_box_species.currentTextChanged.connect(self._on_species_text_changed)
+        self.combo_box_species.currentTextChanged.connect(self._on_species_combo_text_changed)
         self.hidden_combo_box_species.currentTextChanged.connect(
             lambda text: setattr(self.view_model, 'current_species', text)
         )
@@ -300,6 +328,14 @@ class ProjectsView:
         self.view_model.species_error.connect(self._on_species_error)
         self.view_model.species_added.connect(self._on_species_added)
         
+        # Species Mode and Action States
+        self.view_model.species_normal_mode_changed.connect(self._on_species_mode_changed)
+        
+        # Granular Species Actions Binding
+        self.view_model.species_add_enabled.connect(self.add_species_btn.setEnabled)
+        self.view_model.species_modify_enabled.connect(self.modify_species_btn.setEnabled)
+        self.view_model.species_delete_enabled.connect(self.delete_species_btn.setEnabled)
+        
         # Sync Current Text (Main and Hidden)
         self.view_model.current_species_changed.connect(self._on_current_species_changed)
         
@@ -319,8 +355,16 @@ class ProjectsView:
         self.hidden_combo_box_species.setCurrentText(self.view_model.current_species)
         
         # Initial UI constraints
-        self.set_species_enabled(False)
         self.save_btn.setEnabled(False)
+        self._on_species_mode_changed(True)
+        # Force initial interaction state (should be disabled by default as per requirement)
+        is_project_editable = self.view_model.project_editable if hasattr(self.view_model, 'project_editable') else self.view_model._project_editable
+        has_species = bool(self.view_model.current_species)
+        
+        self.set_species_enabled(is_project_editable) 
+        self.add_species_btn.setEnabled(is_project_editable)
+        self.modify_species_btn.setEnabled(has_species)
+        self.delete_species_btn.setEnabled(is_project_editable and has_species)
 
     # ==================== SIGNAL HANDLERS (from ViewModel) ====================
 
@@ -478,15 +522,12 @@ class ProjectsView:
 
     def set_species_enabled(self, state: bool):
         """
-        Enable or disable the species selection and management buttons.
+        Enable or disable the species selection interaction.
         Instead of setEnabled(False) which fades the widget, we use an event filter
         to block interaction while keeping the visual state sharp.
         """
         self.species_filter.is_enabled = state
         self.hidden_species_filter.is_enabled = state
-        self.add_species_btn.setEnabled(state)
-        self.modify_species_btn.setEnabled(state)
-        self.delete_species_btn.setEnabled(state)
 
     def _on_navigation_enabled_changed(self, enabled: bool):
         """Enable or disable navigation buttons (New, Modify, Delete)."""
@@ -546,67 +587,21 @@ class ProjectsView:
         """Toggle the visibility of species action buttons."""
         is_visible = self.species_btns_container.isVisible()
         self.species_btns_container.setVisible(not is_visible)
+
+    def _on_species_mode_changed(self, is_normal: bool):
+        """Switch UI between Normal and In-Line modes."""
+        self.toggle_species_btns_btn.setVisible(is_normal)
+        self.species_btns_container.setVisible(False) # Always start hidden in normal mode
+        self.species_edit_btns_container.setVisible(not is_normal)
         
-        # Update icon from pyside6helpers
-        if is_visible:
-            self.toggle_species_btns_btn.setIcon(icons.menu())
-        else:
-            self.toggle_species_btns_btn.setIcon(icons.menu())
+        # In In-Line mode, the combo box becomes editable but stays visible
+        self.combo_box_species.setEditable(not is_normal)
+        
+        if not is_normal:
+            self.combo_box_species.setFocus()
+            if self.combo_box_species.lineEdit():
+                self.combo_box_species.lineEdit().selectAll()
 
-    def _on_species_text_changed(self, text: str):
-        """
-        Handle text changes in species combo box.
-        If in edit mode and user finishes (loses focus or logic), 
-        we trigger the modification.
-        """
-        # If we are NOT in edit mode, just update the ViewModel normally
-        if not self.view_model.species_editable:
-            self.view_model.current_species = text
-            return
-
-        # If we ARE in edit mode (Modify species), we update the property
+    def _on_species_combo_text_changed(self, text: str):
+        """Update ViewModel when combo box selection changes."""
         self.view_model.current_species = text
-
-    def _on_species_rename_confirmed(self):
-        """
-        Triggered when user presses ENTER in the species combo box while editing.
-        Shows confirmation dialog and calls ViewModel.
-        """
-        if not self.view_model.species_editable:
-            return
-
-        new_name = self.combo_box_species.currentText().strip()
-        
-        # Get the old name (stored when handle_modify_species was called)
-        old_name = getattr(self.view_model, '_original_species_name', '')
-        
-        # CASE 1: Adding a NEW species (old_name is empty)
-        if not old_name:
-            if not new_name:
-                # Exit without adding if empty
-                self.view_model.handle_confirm_modify_species("", "")
-                return
-                
-            self.view_model.handle_add_species_direct(new_name)
-            # Exit edit mode
-            self.view_model.handle_confirm_modify_species(new_name, new_name)
-            return
-
-        # CASE 2: Modifying an EXISTING species
-        if old_name == new_name:
-            self.view_model.handle_confirm_modify_species(old_name, new_name)
-            return
-
-        reply = QMessageBox.question(
-            self.combo_box_species.window(), 'Modify Species',
-            f"Are you sure you want to rename species '{old_name}' to '{new_name}'?\n"
-            "This change will affect ALL projects using this species.",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
-
-        if reply == QMessageBox.Yes:
-            self.view_model.handle_confirm_modify_species(old_name, new_name)
-        else:
-            # Cancel: reset text and exit edit mode
-            self.view_model.current_species = old_name
-            self.view_model.handle_confirm_modify_species(old_name, old_name)
