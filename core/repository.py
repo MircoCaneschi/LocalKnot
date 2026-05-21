@@ -164,6 +164,36 @@ class ProjectRepository:
         except Exception as e:
             raise Exception(f"Failed to add species: {str(e)}")
 
+    def update_species(self, old_name: str, new_name: str) -> bool:
+        """
+        Rename a species and update all projects using it.
+        """
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                # 1. Update species table
+                cursor.execute("UPDATE species SET name = ? WHERE name = ?", (new_name, old_name))
+                # 2. Update project table (manual cascade if not in schema)
+                cursor.execute("UPDATE project SET species = ? WHERE species = ?", (new_name, old_name))
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to update species: {str(e)}")
+
+    def delete_species(self, species_name: str) -> bool:
+        """
+        Delete a species. 
+        Note: foreign key constraints might prevent this if projects still use it.
+        """
+        try:
+            with self.db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM species WHERE name = ?", (species_name,))
+                conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Failed to delete species: {str(e)}")
+
     def delete_project(self, project_id: str) -> bool:
         """
         Delete a project (cascades to boards and knots).

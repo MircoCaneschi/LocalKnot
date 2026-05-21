@@ -148,8 +148,13 @@ class ProjectsView:
         # Species combo
         species_layout = QHBoxLayout()
         self.combo_box_species = QComboBox()
-        self.combo_box_species.setEditable(False)
         self.combo_box_species.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        
+        # To connect the return key, the combobox needs an internal lineEdit.
+        # We must make it editable temporarily to instantiate the lineEdit.
+        self.combo_box_species.setEditable(True)
+        self.combo_box_species.lineEdit().returnPressed.connect(self._on_species_rename_confirmed)
+        self.combo_box_species.setEditable(False)
         
         # Toggle button for species actions
         self.toggle_species_btns_btn = QPushButton()
@@ -249,6 +254,8 @@ class ProjectsView:
         self.new_btn.clicked.connect(self.view_model.handle_new_project)
         self.save_btn.clicked.connect(self.view_model.handle_save_project)
         self.add_species_btn.clicked.connect(self.view_model.handle_add_species)
+        self.modify_species_btn.clicked.connect(self.view_model.handle_modify_species)
+        self.delete_species_btn.clicked.connect(self._on_delete_species_clicked)
         self.change_name_btn.clicked.connect(self.view_model.handle_modify_project)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
         self.toggle_species_btns_btn.clicked.connect(self._toggle_species_btns)
@@ -256,6 +263,7 @@ class ProjectsView:
         # Focus handling
         self.new_btn.clicked.connect(lambda: self.combo_box_projects.setFocus())
         self.add_species_btn.clicked.connect(lambda: self.combo_box_species.setFocus())
+        self.modify_species_btn.clicked.connect(lambda: self.combo_box_species.setFocus())
         self.change_name_btn.clicked.connect(lambda: self.combo_box_projects.setFocus())
 
         # Combo boxes text changes → Update ViewModel properties (Main and Hidden)
@@ -264,10 +272,10 @@ class ProjectsView:
                 lambda text: setattr(self.view_model, 'current_project', text)
             )
         
-        for combo in [self.combo_box_species, self.hidden_combo_box_species]:
-            combo.currentTextChanged.connect(
-                lambda text: setattr(self.view_model, 'current_species', text)
-            )
+        self.combo_box_species.currentTextChanged.connect(self._on_species_text_changed)
+        self.hidden_combo_box_species.currentTextChanged.connect(
+            lambda text: setattr(self.view_model, 'current_species', text)
+        )
 
         # ViewModel Signals → View update methods
         self.view_model.hide_messages.connect(lambda: (self.project_msg.hide(), self.species_msg.hide()))
@@ -509,6 +517,22 @@ class ProjectsView:
         if reply == QMessageBox.Yes:
             self.view_model.handle_delete_project()
 
+    def _on_delete_species_clicked(self):
+        """Handle delete species button click with confirmation."""
+        species_name = self.view_model.current_species
+        if not species_name:
+            return
+
+        reply = QMessageBox.question(
+            self.delete_species_btn.window(), 'Delete Species',
+            f"Are you sure you want to delete species '{species_name}'?\n"
+            "This will only succeed if the species is not used by any project.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.view_model.handle_delete_species()
+
     def _on_current_species_changed(self, text: str):
         """Update species combo boxes. If text is empty, clear selection."""
         if not text:
@@ -528,3 +552,61 @@ class ProjectsView:
             self.toggle_species_btns_btn.setIcon(icons.menu())
         else:
             self.toggle_species_btns_btn.setIcon(icons.menu())
+
+    def _on_species_text_changed(self, text: str):
+        """
+        Handle text changes in species combo box.
+        If in edit mode and user finishes (loses focus or logic), 
+        we trigger the modification.
+        """
+        # If we are NOT in edit mode, just update the ViewModel normally
+        if not self.view_model.species_editable:
+            self.view_model.current_species = text
+            return
+
+        # If we ARE in edit mode (Modify species), we update the property
+        self.view_model.current_species = text
+
+    def _on_species_rename_confirmed(self):
+        """
+        Triggered when user presses ENTER in the species combo box while editing.
+        Shows confirmation dialog and calls ViewModel.
+        """
+        if not self.view_model.species_editable:
+            return
+
+        new_name = self.combo_box_species.currentText().strip()
+        
+        # Get the old name (stored when handle_modify_species was called)
+        old_name = getattr(self.view_model, '_original_species_name', '')
+        
+        # CASE 1: Adding a NEW species (old_name is empty)
+        if not old_name:
+            if not new_name:
+                # Exit without adding if empty
+                self.view_model.handle_confirm_modify_species("", "")
+                return
+                
+            self.view_model.handle_add_species_direct(new_name)
+            # Exit edit mode
+            self.view_model.handle_confirm_modify_species(new_name, new_name)
+            return
+
+        # CASE 2: Modifying an EXISTING species
+        if old_name == new_name:
+            self.view_model.handle_confirm_modify_species(old_name, new_name)
+            return
+
+        reply = QMessageBox.question(
+            self.combo_box_species.window(), 'Modify Species',
+            f"Are you sure you want to rename species '{old_name}' to '{new_name}'?\n"
+            "This change will affect ALL projects using this species.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.view_model.handle_confirm_modify_species(old_name, new_name)
+        else:
+            # Cancel: reset text and exit edit mode
+            self.view_model.current_species = old_name
+            self.view_model.handle_confirm_modify_species(old_name, old_name)

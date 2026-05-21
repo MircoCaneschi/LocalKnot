@@ -51,6 +51,9 @@ class ProjectsViewModel(QObject):
     # Emitted when current species changes
     current_species_changed = Signal(str)
 
+    # Emitted when a species is updated (old_name, new_name)
+    species_updated = Signal(str, str)
+
     # Emitted when current project changes
     current_project_changed = Signal(str)
 
@@ -87,6 +90,7 @@ class ProjectsViewModel(QObject):
         
         self._is_modifying = False
         self._original_project_name = ""
+        self._original_species_name = ""
 
         # Load initial data
         self._load_projects_from_db()
@@ -119,7 +123,7 @@ class ProjectsViewModel(QObject):
         """
         return self._species
 
-    @Property(str)
+    @Property(str, notify=current_project_changed)
     def current_project(self) -> str:
         """Get the currently selected project name."""
         return self._current_project
@@ -272,21 +276,71 @@ class ProjectsViewModel(QObject):
             self.project_error.emit(f"Failed to save project: {str(e)}")
 
     @Slot()
+    def handle_modify_species(self):
+        """
+        Slot called when user clicks 'Modify Species' button.
+        This prepares the UI for renaming a species.
+        Actual renaming logic is handled in handle_save_project or a dedicated slot.
+        """
+        if not self._current_species:
+            return
+
+        # Store the original name to know what we are renaming
+        self._original_species_name = self._current_species
+
+        # Prepare for modification
+        self._species_editable = True
+        self.species_editable_changed.emit(True)
+        # We don't clear the field because we want to edit the existing name
+
+    @Slot()
     def handle_add_species(self):
         """
         Slot called when user clicks 'Add Species' button.
-
-        Prepares UI for adding a new species:
-        - Makes species combo editable
-        - Focuses on species field
+        Prepares UI for adding a new species.
         """
-        # 1. Make editable FIRST
+        self._original_species_name = ""  # New species mode
         self._species_editable = True
-        self.species_editable_changed.emit(self._species_editable)
-        
-        # 2. Clear text
-        self._current_species = ""
-        self.current_species_changed.emit("")
+        self.species_editable_changed.emit(True)
+        self.current_species = ""
+
+    @Slot(str, str)
+    def handle_confirm_modify_species(self, old_name: str, new_name: str):
+        """
+        Actually perform the species renaming in the database.
+        Called after user confirms the QMessageBox in the View.
+        """
+        if not new_name or old_name == new_name:
+            self._species_editable = False
+            self.species_editable_changed.emit(False)
+            return
+
+        try:
+            if self.repo.update_species(old_name, new_name):
+                # Update internal species list
+                self._species = [new_name if s == old_name else s for s in self._species]
+                self._species.sort()
+                self.species_changed.emit(self._species)
+                
+                # Update current species if it was the one modified
+                if self._current_species == old_name:
+                    self._current_species = new_name
+                    self.current_species_changed.emit(new_name)
+
+                # Update internal projects list (species name changed)
+                for p in self._projects:
+                    if p.species == old_name:
+                        p.species = new_name
+                
+                self.species_added.emit(f"Species renamed to {new_name}!")
+                
+                # Exit edit mode
+                self._species_editable = False
+                self.species_editable_changed.emit(False)
+            else:
+                self.species_error.emit("Failed to update species in database.")
+        except Exception as e:
+            self.species_error.emit(f"Error updating species: {str(e)}")
 
     @Slot()
     def handle_delete_project(self):
@@ -318,6 +372,37 @@ class ProjectsViewModel(QObject):
                 self.project_saved.emit(f"Project {project_to_delete} deleted.")
         except Exception as e:
             self.project_error.emit(f"Failed to delete project: {str(e)}")
+
+    @Slot()
+    def handle_delete_species(self):
+        """
+        Slot called when user clicks 'Delete Species' button.
+        Deletes the currently selected species if it's not used by any project.
+        """
+        species_to_delete = self._current_species
+        if not species_to_delete:
+            return
+
+        # Check if used by any project
+        if any(p.species == species_to_delete for p in self._projects):
+            self.species_error.emit(f"Cannot delete {species_to_delete}: it is used by some projects.")
+            return
+
+        try:
+            if self.repo.delete_species(species_to_delete):
+                if species_to_delete in self._species:
+                    self._species.remove(species_to_delete)
+                    self.species_changed.emit(self._species)
+                
+                # Update selection
+                if self._species:
+                    self.current_species = self._species[0]
+                else:
+                    self.current_species = ""
+                
+                self.species_added.emit(f"Species {species_to_delete} deleted.")
+        except Exception as e:
+            self.species_error.emit(f"Failed to delete species: {str(e)}")
 
     @Slot()
     def handle_modify_project(self):
