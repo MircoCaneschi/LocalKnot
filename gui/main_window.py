@@ -8,6 +8,7 @@ from mvvm.viewmodels import ProjectsViewModel, BoardsViewModel, KnotsViewModel
 from gui.components.data_panel.projects_view_mvvm import ProjectsView
 from gui.components.data_panel.boards_view_mvvm import BoardsView
 from gui.components.data_panel.knots_view_mvvm import KnotsView
+from gui.components.header import HeaderWidget
 
 
 class MainWindow(QMainWindow):
@@ -42,6 +43,10 @@ class MainWindow(QMainWindow):
         self.knots_view = KnotsView(self.knots_vm)
 
         # ==================== Add to Layout ====================
+        
+        # Header Layout
+        self.header = HeaderWidget()
+        self.main_layout.addWidget(self.header)
 
         # Toolbar with toggle button
         toolbar_layout = QHBoxLayout()
