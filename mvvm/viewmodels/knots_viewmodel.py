@@ -37,6 +37,11 @@ class KnotsViewModel(QObject):
     # Emitted on successful save
     knot_saved = Signal(str)
 
+    knot_editable_changed = Signal(bool)
+    current_knot_changed = Signal(str)
+    hide_messages = Signal()
+    save_enabled_changed = Signal(bool)
+
     # ==================== CONSTRUCTOR ====================
 
     def __init__(self, repository: KnotRepository):
@@ -47,11 +52,14 @@ class KnotsViewModel(QObject):
         # Internal state
         self._knots = []
         self._current_knot_no = ""
-        self._x = 0.0
-        self._pith_z = 0.0
-        self._pith_y = 0.0
+        self._x = 0
+        self._pith_z = 0
+        self._pith_y = 0
         self._is_fake_pith = False
         self._comment = ""
+        self._knot_editable = False
+        self._current_project = ""
+        self._current_board = ""
 
     # ==================== PROPERTIES ====================
 
@@ -70,49 +78,61 @@ class KnotsViewModel(QObject):
         """Set the current knot number."""
         if self._current_knot_no != value:
             self._current_knot_no = value
-            self.handle_knot_selected(value)
+            self.current_knot_changed.emit(value)
+            if not self._knot_editable:
+                self.handle_knot_selected(value)
 
-    @Property(float)
-    def x(self) -> float:
+    def _mark_dirty(self):
+        if not self._knot_editable and self._current_knot_no:
+            self.save_enabled_changed.emit(True)
+
+    @Property(int)
+    def x(self) -> int:
         """Get the X coordinate."""
         return self._x
 
     @x.setter
-    def x(self, value: float):
+    def x(self, value: int):
         """Set the X coordinate."""
         try:
-            self._x = float(value)
-            self.knot_data_changed.emit()
+            val = int(value)
+            if self._x != val:
+                self._x = val
+                self._mark_dirty()
         except (ValueError, TypeError):
-            self._x = 0.0
+            pass
 
-    @Property(float)
-    def pith_z(self) -> float:
+    @Property(int)
+    def pith_z(self) -> int:
         """Get the Pith Z coordinate."""
         return self._pith_z
 
     @pith_z.setter
-    def pith_z(self, value: float):
+    def pith_z(self, value: int):
         """Set the Pith Z coordinate."""
         try:
-            self._pith_z = float(value)
-            self.knot_data_changed.emit()
+            val = int(value)
+            if self._pith_z != val:
+                self._pith_z = val
+                self._mark_dirty()
         except (ValueError, TypeError):
-            self._pith_z = 0.0
+            pass
 
-    @Property(float)
-    def pith_y(self) -> float:
+    @Property(int)
+    def pith_y(self) -> int:
         """Get the Pith Y coordinate."""
         return self._pith_y
 
     @pith_y.setter
-    def pith_y(self, value: float):
+    def pith_y(self, value: int):
         """Set the Pith Y coordinate."""
         try:
-            self._pith_y = float(value)
-            self.knot_data_changed.emit()
+            val = int(value)
+            if self._pith_y != val:
+                self._pith_y = val
+                self._mark_dirty()
         except (ValueError, TypeError):
-            self._pith_y = 0.0
+            pass
 
     @Property(bool)
     def is_fake_pith(self) -> bool:
@@ -123,8 +143,18 @@ class KnotsViewModel(QObject):
     def is_fake_pith(self, value: bool):
         """Set whether pith is fake."""
         if self._is_fake_pith != value:
+            if not self._current_knot_no and not self._knot_editable:
+                # Discard the change visually and don't save
+                self.knot_error.emit("Nessun nodo selezionato!")
+                self.knot_data_changed.emit()
+                return
+
             self._is_fake_pith = value
             self.knot_data_changed.emit()
+            self._mark_dirty()
+            # Save automatically on toggle if it's an existing knot
+            if not self._knot_editable and self._current_knot_no:
+                self.handle_save_knot()
 
     @Property(str)
     def comment(self) -> str:
@@ -136,17 +166,51 @@ class KnotsViewModel(QObject):
         """Set the knot comment."""
         if self._comment != value:
             self._comment = value
-            self.knot_data_changed.emit()
+            self._mark_dirty()
 
     # ==================== SLOTS ====================
+
+    @Slot(str)
+    def handle_project_changed(self, project_name: str):
+        """Track current project."""
+        self._current_project = project_name
+        self._current_board = ""
+        self._knots = []
+        self.knots_changed.emit(self.knot_list)
+        self.handle_new_knot()
+
+    @Slot(str)
+    def handle_board_changed(self, board_no: str):
+        """Update current board and load its knots."""
+        self._current_board = board_no
+        self._knot_editable = False
+        self.knot_editable_changed.emit(False)
+        try:
+            if board_no and self._current_project:
+                self._knots = self.repo.get_all_knots(board_no, self._current_project)
+            else:
+                self._knots = []
+            
+            self.knots_changed.emit(self.knot_list)
+            
+            if self._knots:
+                self.current_knot_no = str(self._knots[0].knot_no)
+            else:
+                self.handle_new_knot()
+        except Exception as e:
+            self.knot_error.emit(f"Failed to load knots: {str(e)}")
 
     @Slot()
     def handle_new_knot(self):
         """Prepare UI for new knot creation."""
-        self._current_knot_no = ""
-        self._x = 0.0
-        self._pith_z = 0.0
-        self._pith_y = 0.0
+        self.hide_messages.emit()
+        self._knot_editable = True
+        self.knot_editable_changed.emit(True)
+        
+        self.current_knot_no = ""
+        self._x = 0
+        self._pith_z = 0
+        self._pith_y = 0
         self._is_fake_pith = False
         self._comment = ""
         self.knot_data_changed.emit()
@@ -154,13 +218,26 @@ class KnotsViewModel(QObject):
     @Slot()
     def handle_save_knot(self):
         """Validate and save knot data."""
+        self.hide_messages.emit()
+        
+        if not self._current_project or not self._current_board:
+            self.knot_error.emit("No project or board selected!")
+            return
+            
         if not self._current_knot_no:
             self.knot_error.emit("Knot number cannot be empty!")
+            return
+            
+        knot_text = str(self._current_knot_no).strip()
+        
+        # Check duplicate if creating
+        if self._knot_editable and any(str(k.knot_no) == knot_text for k in self._knots):
+            self.knot_error.emit("Knot already exists!")
             return
 
         try:
             knot = Knot(
-                knot_no=self._current_knot_no,
+                knot_no=knot_text,
                 x=self._x,
                 pith_z=self._pith_z,
                 pith_y=self._pith_y,
@@ -169,29 +246,51 @@ class KnotsViewModel(QObject):
             )
 
             if not knot.validate_coordinates():
-                self.knot_error.emit("Invalid coordinates!")
+                self.knot_error.emit("Invalid coordinates! Must be integers.")
                 return
 
-            if self.repo.add_knot(knot):
-                self._knots.append(knot)
-                self.knots_changed.emit(self.knot_list)
-                self.knot_saved.emit(f"Knot {self._current_knot_no} saved!")
-                self.handle_new_knot()
+            if self._knot_editable:
+                if self.repo.add_knot(knot, self._current_board, self._current_project):
+                    self._knots.append(knot)
+                    self.knots_changed.emit(self.knot_list)
+                    self.knot_saved.emit(f"Knot {self._current_knot_no} saved!")
+                    
+                    self._knot_editable = False
+                    self.knot_editable_changed.emit(False)
+                    self.handle_knot_selected(self._current_knot_no)
+            else:
+                if self.repo.update_knot(knot):
+                    for idx, k in enumerate(self._knots):
+                        if str(k.knot_no) == knot_text:
+                            self._knots[idx] = knot
+                            break
+                    self.knot_saved.emit(f"Knot {self._current_knot_no} updated!")
+                    self.save_enabled_changed.emit(False)
         except Exception as e:
             self.knot_error.emit(f"Failed to save: {str(e)}")
 
     @Slot()
     def handle_delete_knot(self):
         """Delete the currently selected knot."""
+        self.hide_messages.emit()
+        
+        if not self._current_project or not self._current_board:
+            self.knot_error.emit("No project or board selected!")
+            return
+
         if not self._current_knot_no:
             self.knot_error.emit("No knot selected!")
             return
 
         try:
-            if self.repo.delete_knot(self._current_knot_no, "", ""):
+            if self.repo.delete_knot(self._current_knot_no, self._current_board, self._current_project):
                 self._knots = [k for k in self._knots if str(k.knot_no) != self._current_knot_no]
                 self.knots_changed.emit(self.knot_list)
-                self.handle_new_knot()
+                
+                if self._knots:
+                    self.current_knot_no = str(self._knots[0].knot_no)
+                else:
+                    self.handle_new_knot()
         except Exception as e:
             self.knot_error.emit(f"Failed to delete: {str(e)}")
 
@@ -202,8 +301,11 @@ class KnotsViewModel(QObject):
             self.handle_new_knot()
             return
 
+        if not self._current_board or not self._current_project:
+            return
+
         try:
-            knot = self.repo.get_knot_by_id(knot_no, "", "")
+            knot = self.repo.get_knot_by_id(knot_no, self._current_board, self._current_project)
             if knot:
                 self._current_knot_no = str(knot.knot_no)
                 self._x = knot.x
@@ -213,15 +315,44 @@ class KnotsViewModel(QObject):
                 self._comment = knot.comment
                 self.knot_data_changed.emit()
                 self.knot_selected.emit(knot_no)
+                self.save_enabled_changed.emit(False)
         except Exception as e:
             self.knot_error.emit(f"Failed to load: {str(e)}")
+
+    @Slot()
+    def handle_previous_knot(self):
+        """Navigate to previous knot in combobox order."""
+        if not self._knots or not self._current_knot_no:
+            return
+            
+        sorted_knots = self.knot_list
+        try:
+            current_index = sorted_knots.index(self._current_knot_no)
+            if current_index > 0:
+                self.current_knot_no = sorted_knots[current_index - 1]
+        except ValueError:
+            pass
+
+    @Slot()
+    def handle_next_knot(self):
+        """Navigate to next knot in combobox order."""
+        if not self._knots or not self._current_knot_no:
+            return
+            
+        sorted_knots = self.knot_list
+        try:
+            current_index = sorted_knots.index(self._current_knot_no)
+            if current_index >= 0 and current_index < len(sorted_knots) - 1:
+                self.current_knot_no = sorted_knots[current_index + 1]
+        except ValueError:
+            pass
 
     # ==================== PRIVATE METHODS ====================
 
     def _load_knot_data(self, knot_no: str) -> bool:
         """Load knot data from model by knot number."""
         try:
-            knot = self.repo.get_knot_by_id(knot_no, "", "")
+            knot = self.repo.get_knot_by_id(knot_no, self._current_board, self._current_project)
             if knot:
                 self._current_knot_no = str(knot.knot_no)
                 self._x = knot.x

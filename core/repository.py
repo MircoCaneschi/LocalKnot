@@ -362,14 +362,14 @@ class KnotRepository:
         except Exception as e:
             raise Exception(f"Failed to get knot: {str(e)}")
 
-    def add_knot(self, knot: Knot) -> bool:
+    def add_knot(self, knot: Knot, board_id: str, project_id: str) -> bool:
         """Add a new knot to database."""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO knot (id_nodo, id_board, id_project, x, pith_z, pith_y, comment, fake_pith, side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)",
-                    (knot.knot_no, "", "", knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith)
+                    (knot.knot_no, board_id, project_id, knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith)
                 )
                 conn.commit()
             return True

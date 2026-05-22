@@ -6,8 +6,9 @@ This View layer receives a KnotsViewModel and binds UI widgets to its Properties
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton,
-    QComboBox, QLineEdit, QCheckBox, QLabel
+    QComboBox, QLineEdit, QCheckBox, QLabel, QMessageBox
 )
+from PySide6.QtGui import QIntValidator
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import KnotsViewModel
@@ -33,6 +34,7 @@ class KnotsView:
         self.pith_y_line = None
         self.comment_line = None
         self.fake_pith = None
+        self.knot_msg = None
 
         # Hidden panel components
         self.hidden_main_layout = None
@@ -50,6 +52,10 @@ class KnotsView:
 
         # Bind ViewModel
         self._bind_to_view_model()
+        
+        # Initial states
+        self.save_btn.setEnabled(False)
+        self.set_knot_editable(False)
 
     # ==================== SETUP UI ====================
 
@@ -79,7 +85,7 @@ class KnotsView:
 
         # bottom layout
         self.knot_no_combo = QComboBox()
-        self.knot_no_combo.setEditable(True)
+        self.knot_no_combo.setEditable(False)
         bottom_layout.addWidget(self.knot_no_combo, 1)
 
         # top layout - shifts
@@ -103,6 +109,12 @@ class KnotsView:
         self.x_line = QLineEdit()
         self.pith_z_line = QLineEdit()
         self.pith_y_line = QLineEdit()
+        
+        validator = QIntValidator()
+        self.x_line.setValidator(validator)
+        self.pith_z_line.setValidator(validator)
+        self.pith_y_line.setValidator(validator)
+        
         self.comment_line = QLineEdit()
         self.fake_pith = QCheckBox()
         self.fake_pith.setChecked(False)
@@ -113,8 +125,13 @@ class KnotsView:
         data_layout.addRow("Comment", self.comment_line)
         data_layout.addRow("Fake pith", self.fake_pith)
 
+        # Message label
+        self.knot_msg = QLabel()
+        self.knot_msg.hide()
+
         # grid disposition
         self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
+        self.main_layout.addWidget(self.knot_msg, 2, 0, 1, 1)
         self.main_layout.addLayout(crud_layout, 1, 1, 3, 1)
         self.main_layout.addLayout(data_layout, 0, 2, 6, 1)
 
@@ -140,7 +157,7 @@ class KnotsView:
 
         # bottom layout
         self.hidden_knot_no_combo = QComboBox()
-        self.hidden_knot_no_combo.setEditable(True)
+        self.hidden_knot_no_combo.setEditable(False)
         hidden_bottom_layout.addWidget(self.hidden_knot_no_combo)
 
         # top layout
@@ -152,6 +169,11 @@ class KnotsView:
         self.hidden_x_line = QLineEdit()
         self.hidden_pith_z_line = QLineEdit()
         self.hidden_pith_y_line = QLineEdit()
+        
+        validator = QIntValidator()
+        self.hidden_x_line.setValidator(validator)
+        self.hidden_pith_z_line.setValidator(validator)
+        self.hidden_pith_y_line.setValidator(validator)
 
         x = QFormLayout()
         x.setContentsMargins(0, 0, 0, 0)
@@ -182,8 +204,14 @@ class KnotsView:
         # Widget signals → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_knot)
         self.save_btn.clicked.connect(self.view_model.handle_save_knot)
-        self.delete_btn.clicked.connect(self.view_model.handle_delete_knot)
-        self.knot_no_combo.currentTextChanged.connect(self.view_model.handle_knot_selected)
+        self.delete_btn.clicked.connect(self._on_delete_clicked)
+        self.knot_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_knot_no', text))
+        self.hidden_knot_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_knot_no', text))
+        
+        self.right_shift_btn.clicked.connect(self.view_model.handle_previous_knot)
+        self.left_shift_btn.clicked.connect(self.view_model.handle_next_knot)
+        self.hidden_right_shift_btn.clicked.connect(self.view_model.handle_previous_knot)
+        self.hidden_left_shift_btn.clicked.connect(self.view_model.handle_next_knot)
 
         # Line edits sync with ViewModel
         self.x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.x_line.text() or 0))
@@ -208,21 +236,34 @@ class KnotsView:
         self.pith_y_line.textEdited.connect(self.hidden_pith_y_line.setText)
         self.hidden_pith_y_line.textEdited.connect(self.pith_y_line.setText)
         
-        self.fake_pith.clicked.connect(self.hidden_fake_pith.setChecked)
-        self.hidden_fake_pith.clicked.connect(self.fake_pith.setChecked)
+        self.fake_pith.toggled.connect(self.hidden_fake_pith.setChecked)
+        self.hidden_fake_pith.toggled.connect(self.fake_pith.setChecked)
 
         # ViewModel Signals → View update methods
         self.view_model.knots_changed.connect(self._on_knots_changed)
         self.view_model.knot_data_changed.connect(self._on_knot_data_changed)
         self.view_model.knot_error.connect(self._on_knot_error)
         self.view_model.knot_saved.connect(self._on_knot_saved)
+        self.view_model.knot_editable_changed.connect(self.set_knot_editable)
+        self.view_model.current_knot_changed.connect(self._on_current_knot_changed)
+        self.view_model.hide_messages.connect(self.knot_msg.hide)
+        self.view_model.save_enabled_changed.connect(self.save_btn.setEnabled)
 
     # ==================== SIGNAL HANDLERS ====================
 
     def _on_knots_changed(self, knots: list):
         """Update knot combo box when knots list changes."""
+        self.knot_no_combo.blockSignals(True)
+        self.hidden_knot_no_combo.blockSignals(True)
+        
         self.knot_no_combo.clear()
         self.knot_no_combo.addItems(knots)
+        
+        self.hidden_knot_no_combo.clear()
+        self.hidden_knot_no_combo.addItems(knots)
+        
+        self.knot_no_combo.blockSignals(False)
+        self.hidden_knot_no_combo.blockSignals(False)
 
     def _on_knot_data_changed(self):
         """Update UI when ViewModel knot data changes."""
@@ -254,9 +295,58 @@ class KnotsView:
 
     def _on_knot_error(self, error_message: str):
         """Display error message on validation failure."""
-        pass
+        self.knot_msg.setText(error_message)
+        self.knot_msg.show()
 
-    def _on_knot_saved(self, knot_no: str):
+    def _on_knot_saved(self, message: str):
         """Show success message when knot is saved."""
-        pass
+        self.knot_msg.setText(message)
+        self.knot_msg.show()
+
+    def _on_delete_clicked(self):
+        """Handle delete button click with confirmation."""
+        knot_no = self.view_model.current_knot_no
+        if not knot_no:
+            return
+
+        reply = QMessageBox.question(
+            self.delete_btn.window(), 'Delete Knot',
+            f"Are you sure you want to delete knot '{knot_no}'?",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.view_model.handle_delete_knot()
+
+    def _on_current_knot_changed(self, text: str):
+        """Sync combo boxes when current knot changes programmatically."""
+        self.knot_no_combo.blockSignals(True)
+        self.hidden_knot_no_combo.blockSignals(True)
+        self.knot_no_combo.setCurrentText(text)
+        self.hidden_knot_no_combo.setCurrentText(text)
+        self.knot_no_combo.blockSignals(False)
+        self.hidden_knot_no_combo.blockSignals(False)
+
+    def set_knot_editable(self, state: bool):
+        """Enable or disable editing for knot combobox and buttons."""
+        self.knot_no_combo.blockSignals(True)
+        self.hidden_knot_no_combo.blockSignals(True)
+        
+        self.knot_no_combo.setEditable(state)
+        self.hidden_knot_no_combo.setEditable(state)
+        
+        if not state:
+            self.knot_no_combo.setCurrentText(self.view_model.current_knot_no)
+            self.hidden_knot_no_combo.setCurrentText(self.view_model.current_knot_no)
+            
+        self.knot_no_combo.blockSignals(False)
+        self.hidden_knot_no_combo.blockSignals(False)
+        
+        self.save_btn.setEnabled(state)
+        self.delete_btn.setEnabled(not state)
+        
+        self.left_shift_btn.setEnabled(not state)
+        self.right_shift_btn.setEnabled(not state)
+        self.hidden_left_shift_btn.setEnabled(not state)
+        self.hidden_right_shift_btn.setEnabled(not state)
 

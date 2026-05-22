@@ -74,6 +74,10 @@ class MainWindow(QMainWindow):
         self.projects_vm.projects_changed.connect(self._update_project_counter)
         self.boards_vm.boards_changed.connect(self._update_board_counter)
         self.projects_vm.current_project_changed.connect(self.boards_vm.handle_project_changed)
+        
+        self.knots_vm.knots_changed.connect(self._update_knot_counter)
+        self.projects_vm.current_project_changed.connect(self.knots_vm.handle_project_changed)
+        self.boards_vm.current_board_changed.connect(self.knots_vm.handle_board_changed)
 
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()
@@ -107,6 +111,7 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.graphics_view)
 
         # Trigger initial data load now that UI is fully initialized
+        self.knots_vm.handle_project_changed(self.projects_vm.current_project)
         self.boards_vm.handle_project_changed(self.projects_vm.current_project)
 
         self.showMaximized()
@@ -132,3 +137,9 @@ class MainWindow(QMainWindow):
         count = len(boards)
         self.board_group.setTitle(f"Boards[{count}]")
         self.hidden_board_group.setTitle(f"Boards[{count}]")
+
+    def _update_knot_counter(self, knots: list):
+        """Update the counter in the knot group box title."""
+        count = len(knots)
+        self.knot_group.setTitle(f"Knots[{count}]")
+        self.hidden_knot_group.setTitle(f"Knots[{count}]")

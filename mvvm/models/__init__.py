@@ -142,8 +142,8 @@ class Knot:
         comment (str): Additional notes about the knot
     """
 
-    def __init__(self, knot_no: int | str, x: float = 0.0,
-                 pith_z: float = 0.0, pith_y: float = 0.0,
+    def __init__(self, knot_no: int | str, x: int = 0,
+                 pith_z: int = 0, pith_y: int = 0,
                  is_fake_pith: bool = False, comment: str = ""):
         """
         Initialize a Knot.
@@ -170,7 +170,7 @@ class Knot:
         Returns:
             bool: True if valid, False otherwise
         """
-        return isinstance(self.x, (int, float)) and \
-               isinstance(self.pith_z, (int, float)) and \
-               isinstance(self.pith_y, (int, float))
+        return isinstance(self.x, int) and \
+               isinstance(self.pith_z, int) and \
+               isinstance(self.pith_y, int)
 
