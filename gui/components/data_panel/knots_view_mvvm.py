@@ -6,7 +6,7 @@ This View layer receives a KnotsViewModel and binds UI widgets to its Properties
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton,
-    QComboBox, QLineEdit, QCheckBox, QLabel, QMessageBox
+    QComboBox, QLineEdit, QCheckBox, QLabel, QMessageBox, QSizePolicy
 )
 from PySide6.QtGui import QIntValidator
 
@@ -127,6 +127,7 @@ class KnotsView:
 
         # Message label
         self.knot_msg = QLabel()
+        self.knot_msg.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.knot_msg.hide()
 
         # grid disposition

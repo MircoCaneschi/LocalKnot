@@ -239,6 +239,8 @@ class ProjectsView:
         # Messages
         self.project_msg = QLabel()
         self.species_msg = QLabel()
+        self.project_msg.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.species_msg.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.project_msg.hide()
         self.species_msg.hide()
 

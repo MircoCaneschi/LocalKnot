@@ -114,11 +114,17 @@ class ProjectRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
+                
+                if old_project_name != project.name:
+                    # Foreign keys must be disabled before ANY DML statement starts the transaction
+                    cursor.execute("PRAGMA foreign_keys = OFF")
+                
                 # Ensure species exists
                 cursor.execute("INSERT OR IGNORE INTO species (name) VALUES (?)", (project.species,))
 
                 if old_project_name != project.name:
                     # Rename project and manually cascade to boards and knots
+                    
                     cursor.execute(
                         "UPDATE project SET id_project = ?, species = ? WHERE id_project = ?",
                         (project.name, project.species, old_project_name)
@@ -131,6 +137,8 @@ class ProjectRepository:
                         "UPDATE knot SET id_project = ? WHERE id_project = ?",
                         (project.name, old_project_name)
                     )
+                    
+                    cursor.execute("PRAGMA foreign_keys = ON")
                 else:
                     # Just update species
                     cursor.execute(

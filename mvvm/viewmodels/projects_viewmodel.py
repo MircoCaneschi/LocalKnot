@@ -144,10 +144,11 @@ class ProjectsViewModel(QObject):
         """Set the current project (property setter)."""
         if self._current_project != value:
             self._current_project = value
-            self.current_project_changed.emit(value)
-
-            # Only auto-change the associated species if we are navigating (not editing/creating)
+            
+            # Only auto-change associated items and emit signals if we are navigating normally
             if not self._project_editable:
+                self.current_project_changed.emit(value)
+                
                 matching_project = next((p for p in self._projects if p.name == value), None)
 
                 if matching_project:
@@ -308,7 +309,8 @@ class ProjectsViewModel(QObject):
             self.save_enabled_changed.emit(False)
             self.navigation_enabled_changed.emit(True)
             
-            # Re-select the saved project
+            # Re-select the saved project and force update signals
+            self._current_project = "" # Force setter to recognize change
             self.current_project = project.name
 
         except Exception as e:

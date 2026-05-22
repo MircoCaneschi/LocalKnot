@@ -127,6 +127,7 @@ class BoardsView:
 
         # Message label
         self.board_msg = QLabel()
+        self.board_msg.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.board_msg.hide()
 
         # grid disposition
