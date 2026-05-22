@@ -312,6 +312,12 @@ class ProjectsView:
         self.change_name_btn.clicked.connect(self.view_model.handle_modify_project)
         self.delete_btn.clicked.connect(self._on_delete_clicked)
         
+        # Shift buttons
+        self.right_shift_btn.clicked.connect(self.view_model.handle_previous_project)
+        self.left_shift_btn.clicked.connect(self.view_model.handle_next_project)
+        self.hidden_right_shift_btn.clicked.connect(self.view_model.handle_previous_project)
+        self.hidden_left_shift_btn.clicked.connect(self.view_model.handle_next_project)
+        
         # Focus handling
         self.new_btn.clicked.connect(lambda: self.combo_box_projects.setFocus())
         self.add_species_btn.clicked.connect(lambda: self.combo_box_species.setFocus())
@@ -389,6 +395,7 @@ class ProjectsView:
         self.add_species_btn.setEnabled(is_project_editable)
         self.modify_species_btn.setEnabled(has_species)
         self.delete_species_btn.setEnabled(is_project_editable and has_species)
+        self._update_shift_buttons_state()
 
     # ==================== SIGNAL HANDLERS (from ViewModel) ====================
 
@@ -527,6 +534,7 @@ class ProjectsView:
             
         self.combo_box_projects.blockSignals(False)
         self.hidden_combo_box_projects.blockSignals(False)
+        self._update_shift_buttons_state()
 
     def set_species_editable(self, state: bool):
         """Check if species combo is editable."""
@@ -543,6 +551,15 @@ class ProjectsView:
             
         self.combo_box_species.blockSignals(False)
         self.hidden_combo_box_species.blockSignals(False)
+        self._update_shift_buttons_state()
+
+    def _update_shift_buttons_state(self):
+        """Update the enabled state of the shift buttons based on editing state."""
+        is_editing = self.combo_box_projects.isEditable() or self.combo_box_species.isEditable()
+        self.right_shift_btn.setEnabled(not is_editing)
+        self.left_shift_btn.setEnabled(not is_editing)
+        self.hidden_right_shift_btn.setEnabled(not is_editing)
+        self.hidden_left_shift_btn.setEnabled(not is_editing)
 
     def set_species_enabled(self, state: bool):
         """

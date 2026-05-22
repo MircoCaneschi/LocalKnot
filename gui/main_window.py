@@ -70,8 +70,10 @@ class MainWindow(QMainWindow):
 
         self.main_layout.addWidget(self.data_panel_container)
 
-        # Connect signals for updating counters
+        # Connect signals for cross-viewModel communication and UI updates
         self.projects_vm.projects_changed.connect(self._update_project_counter)
+        self.boards_vm.boards_changed.connect(self._update_board_counter)
+        self.projects_vm.current_project_changed.connect(self.boards_vm.handle_project_changed)
 
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()
@@ -104,6 +106,9 @@ class MainWindow(QMainWindow):
         self.graphics_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.main_layout.addWidget(self.graphics_view)
 
+        # Trigger initial data load now that UI is fully initialized
+        self.boards_vm.handle_project_changed(self.projects_vm.current_project)
+
         self.showMaximized()
 
 
@@ -121,3 +126,9 @@ class MainWindow(QMainWindow):
         count = len(projects)
         self.project_group.setTitle(f"Projects[{count}]")
         self.hidden_project_group.setTitle(f"Projects[{count}]")
+
+    def _update_board_counter(self, boards: list):
+        """Update the counter in the board group box title."""
+        count = len(boards)
+        self.board_group.setTitle(f"Boards[{count}]")
+        self.hidden_board_group.setTitle(f"Boards[{count}]")

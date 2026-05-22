@@ -535,6 +535,38 @@ class ProjectsViewModel(QObject):
         self.save_enabled_changed.emit(True)
         self.navigation_enabled_changed.emit(False)
 
+    @Slot()
+    def handle_previous_project(self):
+        """Select the previous project in the list."""
+        if not self._projects or not self._current_project:
+            return
+            
+        current_index = -1
+        for i, p in enumerate(self._projects):
+            if p.name == self._current_project:
+                current_index = i
+                break
+                
+        if current_index > 0:
+            new_project = self._projects[current_index - 1]
+            self.current_project = new_project.name
+
+    @Slot()
+    def handle_next_project(self):
+        """Select the next project in the list."""
+        if not self._projects or not self._current_project:
+            return
+            
+        current_index = -1
+        for i, p in enumerate(self._projects):
+            if p.name == self._current_project:
+                current_index = i
+                break
+                
+        if current_index >= 0 and current_index < len(self._projects) - 1:
+            new_project = self._projects[current_index + 1]
+            self.current_project = new_project.name
+
     # ==================== PRIVATE METHODS ====================
 
     def _update_species_actions_state(self):

@@ -6,9 +6,10 @@ This View layer receives a BoardsViewModel and binds UI widgets to its Propertie
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton,
-    QComboBox, QLineEdit, QLabel, QSizePolicy
+    QComboBox, QLineEdit, QLabel, QSizePolicy, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QRegularExpression
+from PySide6.QtGui import QIntValidator, QRegularExpressionValidator
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import BoardsViewModel
@@ -34,6 +35,7 @@ class BoardsView:
         self.length_line = None
         self.testpos_line = None
         self.comment_line = None
+        self.board_msg = None
 
         # Hidden panel components
         self.hidden_main_layout = None
@@ -50,6 +52,10 @@ class BoardsView:
 
         # Bind ViewModel
         self._bind_to_view_model()
+        
+        # Initial states
+        self.save_btn.setEnabled(False)
+        self.set_board_editable(False)
 
     # ==================== SETUP UI ====================
 
@@ -79,7 +85,7 @@ class BoardsView:
 
         # bottom layout - combo box
         self.board_no_combo = QComboBox()
-        self.board_no_combo.setEditable(True)
+        self.board_no_combo.setEditable(False)
         bottom_layout.addWidget(self.board_no_combo, 1)
 
         # shifts
@@ -105,14 +111,27 @@ class BoardsView:
         self.length_line = QLineEdit()
         self.testpos_line = QLineEdit()
         self.comment_line = QLineEdit()
+        
+        float_regex = QRegularExpression(r"^[0-9]*([.,][0-9]{0,2})?$")
+        
+        self.height_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.base_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.length_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.testpos_line.setValidator(QIntValidator(0, 999999))
+        
         data_layout.addRow("Height", self.height_line)
         data_layout.addRow("Base", self.base_line)
         data_layout.addRow("Length", self.length_line)
         data_layout.addRow("TestPos", self.testpos_line)
         data_layout.addRow("Comment", self.comment_line)
 
+        # Message label
+        self.board_msg = QLabel()
+        self.board_msg.hide()
+
         # grid disposition
         self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
+        self.main_layout.addWidget(self.board_msg, 2, 0, 1, 1)
         self.main_layout.addLayout(crud_layout, 1, 1, 3, 1)
         self.main_layout.addLayout(data_layout, 0, 2, 6, 1)
 
@@ -138,7 +157,7 @@ class BoardsView:
 
         # bottom layout
         self.hidden_board_no_combo = QComboBox()
-        self.hidden_board_no_combo.setEditable(True)
+        self.hidden_board_no_combo.setEditable(False)
         hidden_bottom_layout.addWidget(self.hidden_board_no_combo)
 
         # shifts
@@ -150,6 +169,12 @@ class BoardsView:
         self.hidden_height_line = QLineEdit()
         self.hidden_base_line = QLineEdit()
         self.hidden_length_line = QLineEdit()
+        
+        float_regex = QRegularExpression(r"^[0-9]*([.,][0-9]{0,2})?$")
+        
+        self.hidden_height_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.hidden_base_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.hidden_length_line.setValidator(QRegularExpressionValidator(float_regex))
 
         height = QFormLayout()
         height.setContentsMargins(0, 0, 0, 0)
@@ -176,8 +201,15 @@ class BoardsView:
         # Widget signals → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_board)
         self.save_btn.clicked.connect(self.view_model.handle_save_board)
-        self.delete_btn.clicked.connect(self.view_model.handle_delete_board)
-        self.board_no_combo.currentTextChanged.connect(self.view_model.handle_board_selected)
+        self.delete_btn.clicked.connect(self._on_delete_clicked)
+        
+        self.right_shift_btn.clicked.connect(self.view_model.handle_previous_board)
+        self.left_shift_btn.clicked.connect(self.view_model.handle_next_board)
+        self.hidden_right_shift_btn.clicked.connect(self.view_model.handle_previous_board)
+        self.hidden_left_shift_btn.clicked.connect(self.view_model.handle_next_board)
+        
+        self.board_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_board_no', text))
+        self.hidden_board_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_board_no', text))
 
         # Line edits sync with ViewModel
         self.height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', self.height_line.text() or 0))
@@ -185,33 +217,137 @@ class BoardsView:
         self.length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', self.length_line.text() or 0))
         self.testpos_line.textChanged.connect(lambda: setattr(self.view_model, 'test_position', self.testpos_line.text()))
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
+        
+        self.hidden_height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', self.hidden_height_line.text() or 0))
+        self.hidden_base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', self.hidden_base_line.text() or 0))
+        self.hidden_length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', self.hidden_length_line.text() or 0))
+
+        # Sync main and hidden line edits directly
+        self.height_line.textEdited.connect(self.hidden_height_line.setText)
+        self.hidden_height_line.textEdited.connect(self.height_line.setText)
+        
+        self.base_line.textEdited.connect(self.hidden_base_line.setText)
+        self.hidden_base_line.textEdited.connect(self.base_line.setText)
+        
+        self.length_line.textEdited.connect(self.hidden_length_line.setText)
+        self.hidden_length_line.textEdited.connect(self.length_line.setText)
 
         # ViewModel Signals → View update methods
         self.view_model.boards_changed.connect(self._on_boards_changed)
         self.view_model.board_data_changed.connect(self._on_board_data_changed)
         self.view_model.board_error.connect(self._on_board_error)
         self.view_model.board_saved.connect(self._on_board_saved)
+        self.view_model.board_editable_changed.connect(self.set_board_editable)
+        self.view_model.current_board_changed.connect(self._on_current_board_changed)
+        self.view_model.hide_messages.connect(self.board_msg.hide)
+        self.view_model.save_enabled_changed.connect(self.save_btn.setEnabled)
 
     # ==================== SIGNAL HANDLERS ====================
 
     def _on_boards_changed(self, boards: list):
         """Update board combo box when boards list changes."""
+        self.board_no_combo.blockSignals(True)
+        self.hidden_board_no_combo.blockSignals(True)
+        
         self.board_no_combo.clear()
         self.board_no_combo.addItems(boards)
+        
+        self.hidden_board_no_combo.clear()
+        self.hidden_board_no_combo.addItems(boards)
+        
+        self.board_no_combo.blockSignals(False)
+        self.hidden_board_no_combo.blockSignals(False)
 
     def _on_board_data_changed(self):
         """Update UI when ViewModel board data changes."""
-        self.height_line.setText(str(self.view_model.height))
-        self.base_line.setText(str(self.view_model.base))
-        self.length_line.setText(str(self.view_model.length))
-        self.testpos_line.setText(self.view_model.test_position)
-        self.comment_line.setText(self.view_model.comment)
+        line_edits = [
+            self.height_line, self.base_line, self.length_line,
+            self.testpos_line, self.comment_line,
+            self.hidden_height_line, self.hidden_base_line, self.hidden_length_line
+        ]
+        
+        for le in line_edits:
+            if le: le.blockSignals(True)
+            
+        def format_float(val: float) -> str:
+            s = f"{val:.2f}".rstrip('0').rstrip('.')
+            return s if s else "0"
+            
+        self.height_line.setText(format_float(self.view_model.height))
+        self.base_line.setText(format_float(self.view_model.base))
+        self.length_line.setText(format_float(self.view_model.length))
+        self.testpos_line.setText(str(self.view_model.test_position))
+        self.comment_line.setText(str(self.view_model.comment))
+        
+        if self.hidden_height_line:
+            self.hidden_height_line.setText(format_float(self.view_model.height))
+        if self.hidden_base_line:
+            self.hidden_base_line.setText(format_float(self.view_model.base))
+        if self.hidden_length_line:
+            self.hidden_length_line.setText(format_float(self.view_model.length))
+            
+        for le in line_edits:
+            if le: le.blockSignals(False)
 
     def _on_board_error(self, error_message: str):
         """Display error message on validation failure."""
-        pass
+        self.board_msg.setText(error_message)
+        self.board_msg.show()
 
-    def _on_board_saved(self, board_no: str):
+    def _on_board_saved(self, message: str):
         """Show success message when board is saved."""
-        pass
+        self.board_msg.setText(message)
+        self.board_msg.show()
+
+    def _on_delete_clicked(self):
+        """Handle delete button click with confirmation."""
+        board_no = self.view_model.current_board_no
+        if not board_no:
+            return
+
+        reply = QMessageBox.question(
+            self.delete_btn.window(), 'Delete Board',
+            f"Are you sure you want to delete board '{board_no}'?\n"
+            "This will also delete all associated knots.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            self.view_model.handle_delete_board()
+
+    def _on_current_board_changed(self, text: str):
+        """Sync combo boxes when current board changes programmatically."""
+        self.board_no_combo.blockSignals(True)
+        self.hidden_board_no_combo.blockSignals(True)
+        self.board_no_combo.setCurrentText(text)
+        self.hidden_board_no_combo.setCurrentText(text)
+        self.board_no_combo.blockSignals(False)
+        self.hidden_board_no_combo.blockSignals(False)
+
+    def set_board_editable(self, state: bool):
+        """Enable or disable editing for board combobox and buttons."""
+        self.board_no_combo.blockSignals(True)
+        self.hidden_board_no_combo.blockSignals(True)
+        
+        self.board_no_combo.setEditable(state)
+        self.hidden_board_no_combo.setEditable(state)
+        
+        if state:
+            self.board_no_combo.setValidator(QIntValidator(1, 999999))
+            self.hidden_board_no_combo.setValidator(QIntValidator(1, 999999))
+        
+        if not state:
+            self.board_no_combo.setCurrentText(self.view_model.current_board_no)
+            self.hidden_board_no_combo.setCurrentText(self.view_model.current_board_no)
+            
+        self.board_no_combo.blockSignals(False)
+        self.hidden_board_no_combo.blockSignals(False)
+        
+        self.save_btn.setEnabled(state)
+        self.delete_btn.setEnabled(not state)
+        
+        self.left_shift_btn.setEnabled(not state)
+        self.right_shift_btn.setEnabled(not state)
+        self.hidden_left_shift_btn.setEnabled(not state)
+        self.hidden_right_shift_btn.setEnabled(not state)
 

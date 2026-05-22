@@ -94,13 +94,13 @@ class Board:
         height (float): Board height measurement
         base (float): Board base measurement
         length (float): Board length measurement
-        test_position (str): Test position reference
+        test_position (int): Test position reference
         comment (str): Additional notes about the board
     """
 
     def __init__(self, board_no: int | str, height: float = 0.0,
                  base: float = 0.0, length: float = 0.0,
-                 test_position: str = "", comment: str = ""):
+                 test_position: int = 0, comment: str = ""):
         """
         Initialize a Board.
 

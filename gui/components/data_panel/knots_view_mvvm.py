@@ -192,6 +192,25 @@ class KnotsView:
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
         self.fake_pith.stateChanged.connect(lambda: setattr(self.view_model, 'is_fake_pith', self.fake_pith.isChecked()))
 
+        # Also sync hidden components with ViewModel
+        self.hidden_x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.hidden_x_line.text() or 0))
+        self.hidden_pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.hidden_pith_z_line.text() or 0))
+        self.hidden_pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.hidden_pith_y_line.text() or 0))
+        self.hidden_fake_pith.stateChanged.connect(lambda: setattr(self.view_model, 'is_fake_pith', self.hidden_fake_pith.isChecked()))
+
+        # Sync main and hidden components directly
+        self.x_line.textEdited.connect(self.hidden_x_line.setText)
+        self.hidden_x_line.textEdited.connect(self.x_line.setText)
+        
+        self.pith_z_line.textEdited.connect(self.hidden_pith_z_line.setText)
+        self.hidden_pith_z_line.textEdited.connect(self.pith_z_line.setText)
+        
+        self.pith_y_line.textEdited.connect(self.hidden_pith_y_line.setText)
+        self.hidden_pith_y_line.textEdited.connect(self.pith_y_line.setText)
+        
+        self.fake_pith.clicked.connect(self.hidden_fake_pith.setChecked)
+        self.hidden_fake_pith.clicked.connect(self.fake_pith.setChecked)
+
         # ViewModel Signals → View update methods
         self.view_model.knots_changed.connect(self._on_knots_changed)
         self.view_model.knot_data_changed.connect(self._on_knot_data_changed)
@@ -207,11 +226,31 @@ class KnotsView:
 
     def _on_knot_data_changed(self):
         """Update UI when ViewModel knot data changes."""
+        line_edits = [
+            self.x_line, self.pith_z_line, self.pith_y_line, self.comment_line,
+            self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line
+        ]
+        
+        for le in line_edits:
+            le.blockSignals(True)
+        self.fake_pith.blockSignals(True)
+        self.hidden_fake_pith.blockSignals(True)
+
         self.x_line.setText(str(self.view_model.x))
         self.pith_z_line.setText(str(self.view_model.pith_z))
         self.pith_y_line.setText(str(self.view_model.pith_y))
         self.comment_line.setText(self.view_model.comment)
         self.fake_pith.setChecked(self.view_model.is_fake_pith)
+        
+        self.hidden_x_line.setText(str(self.view_model.x))
+        self.hidden_pith_z_line.setText(str(self.view_model.pith_z))
+        self.hidden_pith_y_line.setText(str(self.view_model.pith_y))
+        self.hidden_fake_pith.setChecked(self.view_model.is_fake_pith)
+        
+        for le in line_edits:
+            le.blockSignals(False)
+        self.fake_pith.blockSignals(False)
+        self.hidden_fake_pith.blockSignals(False)
 
     def _on_knot_error(self, error_message: str):
         """Display error message on validation failure."""

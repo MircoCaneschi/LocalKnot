@@ -272,28 +272,28 @@ class BoardRepository:
         except Exception as e:
             raise Exception(f"Failed to get board: {str(e)}")
 
-    def add_board(self, board: Board) -> bool:
+    def add_board(self, board: Board, project_id: str) -> bool:
         """Add a new board to database."""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "INSERT INTO board (id_board, id_project, height, base, length, testpos, comment) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (board.board_no, "", board.height, board.base, board.length, board.test_position, board.comment)
+                    (board.board_no, project_id, board.height, board.base, board.length, board.test_position, board.comment)
                 )
                 conn.commit()
             return True
         except Exception as e:
             raise Exception(f"Failed to add board: {str(e)}")
 
-    def update_board(self, board: Board) -> bool:
+    def update_board(self, board: Board, project_id: str) -> bool:
         """Update an existing board."""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "UPDATE board SET height = ?, base = ?, length = ?, testpos = ?, comment = ? WHERE id_board = ?",
-                    (board.height, board.base, board.length, board.test_position, board.comment, board.board_no)
+                    "UPDATE board SET height = ?, base = ?, length = ?, testpos = ?, comment = ? WHERE id_board = ? AND id_project = ?",
+                    (board.height, board.base, board.length, board.test_position, board.comment, board.board_no, project_id)
                 )
                 conn.commit()
             return True
@@ -305,7 +305,7 @@ class BoardRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM board WHERE id_board = ?", (board_id,))
+                cursor.execute("DELETE FROM board WHERE id_board = ? AND id_project = ?", (board_id, project_id))
                 conn.commit()
             return True
         except Exception as e:
