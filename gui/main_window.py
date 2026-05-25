@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QGraphicsView, QGraphicsScene,
-                               QSizePolicy, QGroupBox)
+                               QSizePolicy, QGroupBox, QScrollArea)
 
 from core.database import DatabaseManager
 from core.repository import ProjectRepository, BoardRepository, KnotRepository
@@ -10,6 +10,10 @@ from gui.components.data_panel.boards_view_mvvm import BoardsView
 from gui.components.data_panel.knots_view_mvvm import KnotsView
 from gui.components.header import HeaderWidget
 
+from core.board_calculator import BoardCalculator
+from mvvm.viewmodels.virtual_board_vm import VirtualBoardViewModel
+from gui.components.virtual_board_view import VirtualBoardView
+
 
 class MainWindow(QMainWindow):
     """Main application window with MVVM architecture."""
@@ -18,8 +22,13 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("LocalKnot - MVVM Architecture")
 
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
+        
         central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        self.scroll_area.setWidget(central_widget)
+        self.setCentralWidget(self.scroll_area)
 
         # Main vertical layout
         self.main_layout = QVBoxLayout(central_widget)
@@ -109,11 +118,11 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.hidden_data_panel_container)
         self.hidden_data_panel_container.hide()
 
-        # Graphics area
-        self.scene = QGraphicsScene()
-        self.graphics_view = QGraphicsView(self.scene)
-        self.graphics_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.main_layout.addWidget(self.graphics_view)
+        # Virtual Board area
+        self.board_calculator = BoardCalculator()
+        self.virtual_board_vm = VirtualBoardViewModel(self.board_calculator, self.knot_repo)
+        self.virtual_board_view = VirtualBoardView(self.virtual_board_vm)
+        self.main_layout.addWidget(self.virtual_board_view)
 
         # Trigger initial data load now that UI is fully initialized
         self.knots_vm.handle_project_changed(self.projects_vm.current_project)
