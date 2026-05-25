@@ -20,47 +20,20 @@ project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QFile, QTextStream, QIODevice
 from gui.main_window import MainWindow
-
+import resources_rc
 
 def main():
     """Application entry point - MVVM Architecture."""
     app = QApplication(sys.argv)
 
-    # Apply global stylesheet
-    stylesheet = """
-        QMainWindow {
-            background-color: #F59D67;
-        }
-        QGroupBox {
-            background-color: #BD8142;
-            color: #824300;
-            border-radius: 10px;
-            padding: 10px;
-        }
-        QPushButton {
-            background-color: #824300;
-            color: white;
-            padding: 5px;
-            border-radius: 10px;
-        }
-        QPushButton:hover {
-            color: yellow;
-        }
-        QPushButton:pressed {
-            background-color: #A85C0A;
-            padding-left: 7px;
-            padding-top: 7px;
-        }
-        QPushButton:disabled {
-            background-color: #A06A33;
-            color: #D3A87C;
-        }
-        QLabel {
-            color: #824300;
-        }
-    """
-    app.setStyleSheet(stylesheet)
+    # Apply global stylesheet from resources
+    qss_file = QFile(":/styles/style.qss")
+    if qss_file.open(QIODevice.ReadOnly | QIODevice.Text):
+        stream = QTextStream(qss_file)
+        app.setStyleSheet(stream.readAll())
+        qss_file.close()
 
     # Create and show main window
     window = MainWindow()

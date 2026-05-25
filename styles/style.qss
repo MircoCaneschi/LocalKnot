@@ -1,0 +1,37 @@
+QMainWindow {
+    background-color: #F59D67;
+}
+QGroupBox {
+    background-color: #BD8142;
+    color: #824300;
+    border-radius: 10px;
+    padding: 10px;
+}
+QPushButton {
+    background-color: #824300;
+    color: white;
+    padding: 5px;
+    border-radius: 10px;
+}
+QPushButton:hover {
+    color: yellow;
+}
+QPushButton:pressed {
+    background-color: #A85C0A;
+    padding-left: 7px;
+    padding-top: 7px;
+}
+QPushButton:disabled {
+    background-color: #A06A33;
+    color: #D3A87C;
+}
+QLabel {
+    color: #824300;
+}
+
+/* Stili specifici per l'Header */
+QLabel#HeaderTitle {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #824300; /* Manteniamo il colore del tema */
+}
