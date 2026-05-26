@@ -10,9 +10,9 @@ from mvvm.viewmodels.virtual_board_vm import VirtualBoardViewModel
 
 class VirtualBoardView(QWidget):
     """
-    Interfaccia grafica interattiva per la visualizzazione e l'inserimento
-    dei dati della tavola e del nodo corrente. 
-    Contiene un QGraphicsView al centro e le 12 LineEdit ai lati.
+    Interactive graphical interface for viewing and inputting
+    data for the board and the current knot.
+    Contains a QGraphicsView in the center and 12 LineEdits on the sides.
     """
     def __init__(self, view_model: VirtualBoardViewModel):
         super().__init__()
@@ -22,18 +22,18 @@ class VirtualBoardView(QWidget):
         self.bind_view_model()
         
     def setup_ui(self):
-        # Layout principale
+        # Main layout
         main_layout = QVBoxLayout(self)
         
-        # --- GRIGLIA GRAFICA E INPUT ---
+        # --- GRAPHICS GRID AND INPUT ---
         grid_layout = QGridLayout()
         grid_layout.setContentsMargins(0, 0, 0, 0)
         
-        # Validatore per accettare solo numeri interi
+        # Validator to accept only integers
         validator = QIntValidator()
         self.inputs = {}
 
-        # Funzione helper per creare un gruppo di 3 line edit (z1, z2, dmin)
+        # Helper function to create a group of 3 line edits (z1, z2, dmin)
         def create_side_inputs(side_name, orientation="horizontal"):
             container = QWidget()
             layout = QHBoxLayout(container) if orientation == "horizontal" else QVBoxLayout(container)
@@ -53,22 +53,22 @@ class VirtualBoardView(QWidget):
             self.inputs[side_name] = group_inputs
             return container
 
-        # Creazione dei 4 lati
+        # Creation of the 4 sides
         top_widget = create_side_inputs("side1_top", "horizontal")
         right_widget = create_side_inputs("side2_right", "vertical")
         bottom_widget = create_side_inputs("side3_bottom", "horizontal")
         left_widget = create_side_inputs("side4_left", "vertical")
 
-        # Centro: QGraphicsView
+        # Center: QGraphicsView
         self.scene = QGraphicsScene()
         self.graphics_view = QGraphicsView(self.scene)
         self.graphics_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.graphics_view.setMinimumSize(400, 400)
 
-        # Posizionamento nella griglia
-        # riga 0: vuoto, top, vuoto
-        # riga 1: left, centro, right
-        # riga 2: vuoto, bottom, vuoto
+        # Positioning in the grid
+        # row 0: empty, top, empty
+        # row 1: left, center, right
+        # row 2: empty, bottom, empty
         grid_layout.addWidget(top_widget, 0, 1, alignment=Qt.AlignmentFlag.AlignCenter)
         grid_layout.addWidget(left_widget, 1, 0, alignment=Qt.AlignmentFlag.AlignCenter)
         grid_layout.addWidget(self.graphics_view, 1, 1)
@@ -76,55 +76,8 @@ class VirtualBoardView(QWidget):
         grid_layout.addWidget(bottom_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignCenter)
 
         main_layout.addLayout(grid_layout, stretch=1)
-        
-        # --- TENDINA RISULTATI ---
-        self.results_container = QWidget()
-        results_layout = QVBoxLayout(self.results_container)
-        results_layout.setContentsMargins(0, 10, 0, 0)
-        
-        # Pulsante per mostrare/nascondere i risultati
-        self.toggle_results_btn = QPushButton("Mostra/Nascondi Parametri Calcolati")
-        self.toggle_results_btn.clicked.connect(self._toggle_results)
-        results_layout.addWidget(self.toggle_results_btn)
-        
-        # Gruppo con i dati (inizialmente nascosto)
-        self.results_group = QGroupBox("Parametri del Nodo")
-        group_layout = QGridLayout(self.results_group)
-        
-        # Creiamo label placeholder per i risultati
-        self.result_labels = {}
-        parameters = ["tKnot", "mKnot", "tKAR", "mKAR_L", "mKAR_R", "mKAR", "DEB", "DAB", "DEK", "EEB", "EAB"]
-        
-        row, col = 0, 0
-        for param in parameters:
-            name_lbl = QLabel(f"<b>{param}:</b>")
-            val_lbl = QLabel("-")
-            
-            form = QHBoxLayout()
-            form.addWidget(name_lbl)
-            form.addWidget(val_lbl)
-            form.addStretch()
-            
-            group_layout.addLayout(form, row, col)
-            self.result_labels[param] = val_lbl
-            
-            col += 1
-            if col > 3:  # 4 colonne per non renderlo troppo alto
-                col = 0
-                row += 1
-                
-        results_layout.addWidget(self.results_group)
-        self.results_group.hide()  # Nascondi all'avvio
-        
-        main_layout.addWidget(self.results_container)
 
-    def _toggle_results(self):
-        """Mostra o nasconde il pannello dei risultati."""
-        if self.results_group.isVisible():
-            self.results_group.hide()
-        else:
-            self.results_group.show()
 
     def bind_view_model(self):
-        # Collegheremo qui i segnali del view_model alle line edit e alla grafica
+        # We will connect the view_model signals to the line edits and graphics here
         pass

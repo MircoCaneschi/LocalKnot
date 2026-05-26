@@ -6,6 +6,8 @@ QGroupBox {
     color: #824300;
     border-radius: 10px;
     padding: 10px;
+    font-size: 10pt;
+    font-weight: bold;
 }
 QPushButton {
     background-color: #824300;
@@ -27,11 +29,89 @@ QPushButton:disabled {
 }
 QLabel {
     color: #824300;
+    font-size: 9pt;
 }
 
-/* Stili specifici per l'Header */
+/* Specific styles for the Header */
 QLabel#HeaderTitle {
     font-size: 24pt;
     font-weight: bold;
-    color: #824300; /* Manteniamo il colore del tema */
+    color: #824300; /* Keep the theme color */
+}
+
+/* --- QScrollArea --- */
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+}
+
+/* --- Vertical Scrollbar --- */
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 14px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #824300;
+    min-height: 20px;
+    /* Visual width is 6px (14px total - 4px left - 4px right).
+       In Qt, border-radius CANNOT exceed half the width (3px),
+       otherwise it breaks and falls back to a square! */
+    border-radius: 3px;
+    margin: 4px 4px 4px 4px; 
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #A85C0A;
+    /* Expanding on hover: Visual width becomes 10px (14px - 2px left - 2px right).
+       We can increase the radius up to 5px to keep it rounded. */
+    border-radius: 5px;
+    margin: 2px 2px 2px 2px; 
+}
+
+/* hide top/bottom arrows */
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: none;
+}
+
+/* --- Horizontal Scrollbar --- */
+QScrollBar:horizontal {
+    border: none;
+    background: transparent;
+    height: 14px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #824300;
+    min-width: 20px;
+    /* Visual height is 6px (14px - 4px top - 4px bottom) -> max radius 3px */
+    border-radius: 3px;
+    margin: 4px 4px 4px 4px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #A85C0A;
+    /* Visual height becomes 10px -> max radius 5px */
+    border-radius: 5px;
+    margin: 2px 2px 2px 2px;
+}
+
+/* hide right/left arrows */
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+    background: none;
 }

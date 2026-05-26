@@ -2,11 +2,11 @@ from PySide6.QtCore import QObject, Signal
 
 class VirtualBoardViewModel(QObject):
     """
-    ViewModel che fa da ponte tra la VirtualBoardView (interfaccia utente) 
-    e il BoardCalculator (logica core) / Repository (database).
+    ViewModel that acts as a bridge between the VirtualBoardView (user interface)
+    and the BoardCalculator (core logic) / Repository (database).
     """
     
-    # Segnali per notificare la UI dei cambiamenti
+    # Signals to notify the UI of changes
     results_updated = Signal(dict)
     
     def __init__(self, calculator, knot_repo):
@@ -14,7 +14,7 @@ class VirtualBoardViewModel(QObject):
         self.calculator = calculator
         self.knot_repo = knot_repo
         
-        # Proprietà per contenere i dati correnti del nodo
+        # Property to hold the current knot data
         self.current_knot_data = {}
 
-    # Qui implementeremo le funzioni per aggiornare i dati e calcolare i risultati
+    # Here we will implement the functions to update data and calculate results

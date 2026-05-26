@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QGraphicsView, QGraphicsScene,
                                QSizePolicy, QGroupBox, QScrollArea)
+from PySide6.QtCore import Qt
 
 from core.database import DatabaseManager
 from core.repository import ProjectRepository, BoardRepository, KnotRepository
@@ -13,7 +14,7 @@ from gui.components.header import HeaderWidget
 from core.board_calculator import BoardCalculator
 from mvvm.viewmodels.virtual_board_vm import VirtualBoardViewModel
 from gui.components.virtual_board_view import VirtualBoardView
-
+from gui.components.knot_results_view import KnotResultsView
 
 class MainWindow(QMainWindow):
     """Main application window with MVVM architecture."""
@@ -121,6 +122,11 @@ class MainWindow(QMainWindow):
         # Virtual Board area
         self.board_calculator = BoardCalculator()
         self.virtual_board_vm = VirtualBoardViewModel(self.board_calculator, self.knot_repo)
+        
+        # Results panel (between data panel and virtual board)
+        self.knot_results_view = KnotResultsView(self.virtual_board_vm)
+        self.main_layout.addWidget(self.knot_results_view)
+        
         self.virtual_board_view = VirtualBoardView(self.virtual_board_vm)
         self.main_layout.addWidget(self.virtual_board_view)
 

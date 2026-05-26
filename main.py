@@ -28,8 +28,10 @@ def main():
     """Application entry point - MVVM Architecture."""
     app = QApplication(sys.argv)
 
-    # Apply global stylesheet from resources
-    qss_file = QFile(":/styles/style.qss")
+    # Apply global stylesheet directly from the filesystem for easier development
+    # (Alternatively, to use the compiled resource: QFile(":/styles/style.qss"))
+    qss_file_path = os.path.join(project_root, "styles", "style.qss")
+    qss_file = QFile(qss_file_path)
     if qss_file.open(QIODevice.ReadOnly | QIODevice.Text):
         stream = QTextStream(qss_file)
         app.setStyleSheet(stream.readAll())

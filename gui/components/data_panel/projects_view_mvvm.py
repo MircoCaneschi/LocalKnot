@@ -582,8 +582,8 @@ class ProjectsView:
         # Update the ViewModel
         self.view_model.current_project = text
         # read the species and update the UI
-        nuova_specie = self.view_model.current_species
-        self.combo_box_species.setCurrentText(nuova_specie)
+        new_species = self.view_model.current_species
+        self.combo_box_species.setCurrentText(new_species)
 
     def _on_delete_clicked(self):
         """Handle delete button click with confirmation."""
