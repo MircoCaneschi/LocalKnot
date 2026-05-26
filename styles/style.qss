@@ -115,3 +115,36 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
 QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
     background: none;
 }
+
+/* --- Results Toggle Button --- */
+QPushButton#ResultsToggleBtn {
+    background-color: transparent;
+    border: none;
+    margin-top: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
+QPushButton#ResultsToggleBtn:hover {
+    background-color: transparent;
+}
+QPushButton#ResultsToggleBtn:pressed {
+    background-color: transparent;
+    padding-left: 0px;
+    padding-top: 0px;
+}
+
+/* --- Results Divider --- */
+QFrame#ResultsDivider {
+    background-color: #824300;
+    min-height: 2px;
+    max-height: 2px;
+    border: none;
+}
+
+/* --- Results Divider --- */
+QFrame#ResultsDivider {
+    background-color: #824300;
+    min-height: 2px;
+    max-height: 2px;
+    border: none;
+}

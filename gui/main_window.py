@@ -68,6 +68,7 @@ class MainWindow(QMainWindow):
         # Data panel container
         self.data_panel_container = QWidget()
         self.data_panel_layout = QHBoxLayout(self.data_panel_container)
+        self.data_panel_layout.setContentsMargins(9, 9, 9, 0)
 
         # Add all views to their QGroupBox
         self.project_group = QGroupBox(f"Projects[{self.projects_view.combo_box_projects.count()}]")
@@ -97,6 +98,7 @@ class MainWindow(QMainWindow):
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()
         self.hidden_data_panel_layout = QHBoxLayout(self.hidden_data_panel_container)
+        self.hidden_data_panel_layout.setContentsMargins(9, 9, 9, 0)
 
         # Hidden groupBox
         self.hidden_project_group = QGroupBox(f"Projects[{self.projects_view.combo_box_projects.count()}]")
