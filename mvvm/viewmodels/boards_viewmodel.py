@@ -157,6 +157,7 @@ class BoardsViewModel(QObject):
         """Update current project and load its boards."""
         self._current_project = project_name
         self._board_editable = False
+        self._current_board_no = ""  # Force setter to trigger
         self.board_editable_changed.emit(False)
         try:
             if project_name:

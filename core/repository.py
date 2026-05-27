@@ -324,7 +324,7 @@ class BoardRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT 1 FROM board WHERE id_board = ? LIMIT 1", (board_id,))
+                cursor.execute("SELECT 1 FROM board WHERE id_board = ? AND id_project = ? LIMIT 1", (board_id, project_id))
                 return cursor.fetchone() is not None
         except:
             return False
@@ -351,7 +351,7 @@ class KnotRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_board = ?", (board_id,))
+                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_board = ? AND id_project = ?", (board_id, project_id))
                 rows = cursor.fetchall()
                 return [Knot(knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6]) for row in rows]
         except Exception as e:
@@ -362,7 +362,7 @@ class KnotRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_nodo = ? AND id_board = ?", (knot_id, board_id))
+                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_nodo = ? AND id_board = ? AND id_project = ?", (knot_id, board_id, project_id))
                 row = cursor.fetchone()
                 if row:
                     return Knot(knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6])
@@ -384,14 +384,14 @@ class KnotRepository:
         except Exception as e:
             raise Exception(f"Failed to add knot: {str(e)}")
 
-    def update_knot(self, knot: Knot) -> bool:
+    def update_knot(self, knot: Knot, board_id: str, project_id: str) -> bool:
         """Update an existing knot."""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, fake_pith = ? WHERE id_nodo = ?",
-                    (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith, knot.knot_no)
+                    "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, fake_pith = ? WHERE id_nodo = ? AND id_board = ? AND id_project = ?",
+                    (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith, knot.knot_no, board_id, project_id)
                 )
                 conn.commit()
             return True
@@ -403,7 +403,7 @@ class KnotRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("DELETE FROM knot WHERE id_nodo = ?", (knot_id,))
+                cursor.execute("DELETE FROM knot WHERE id_nodo = ? AND id_board = ? AND id_project = ?", (knot_id, board_id, project_id))
                 conn.commit()
             return True
         except Exception as e:
@@ -414,7 +414,7 @@ class KnotRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT 1 FROM knot WHERE id_nodo = ? LIMIT 1", (knot_id,))
+                cursor.execute("SELECT 1 FROM knot WHERE id_nodo = ? AND id_board = ? AND id_project = ? LIMIT 1", (knot_id, board_id, project_id))
                 return cursor.fetchone() is not None
         except:
             return False

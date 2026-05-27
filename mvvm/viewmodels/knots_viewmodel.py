@@ -184,6 +184,7 @@ class KnotsViewModel(QObject):
         """Update current board and load its knots."""
         self._current_board = board_no
         self._knot_editable = False
+        self._current_knot_no = ""  # Force setter to trigger
         self.knot_editable_changed.emit(False)
         try:
             if board_no and self._current_project:
@@ -259,7 +260,7 @@ class KnotsViewModel(QObject):
                     self.knot_editable_changed.emit(False)
                     self.handle_knot_selected(self._current_knot_no)
             else:
-                if self.repo.update_knot(knot):
+                if self.repo.update_knot(knot, self._current_board, self._current_project):
                     for idx, k in enumerate(self._knots):
                         if str(k.knot_no) == knot_text:
                             self._knots[idx] = knot

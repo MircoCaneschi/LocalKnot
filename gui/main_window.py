@@ -89,10 +89,14 @@ class MainWindow(QMainWindow):
         # Connect signals for cross-viewModel communication and UI updates
         self.projects_vm.projects_changed.connect(self._update_project_counter)
         self.boards_vm.boards_changed.connect(self._update_board_counter)
+        self.knots_vm.knots_changed.connect(self._update_knot_counter)
+        
+        # VERY IMPORTANT ORDER: Update knots_vm with new project FIRST, 
+        # so when boards_vm selects the first board and emits current_board_changed, 
+        # knots_vm already knows the correct project context.
+        self.projects_vm.current_project_changed.connect(self.knots_vm.handle_project_changed)
         self.projects_vm.current_project_changed.connect(self.boards_vm.handle_project_changed)
         
-        self.knots_vm.knots_changed.connect(self._update_knot_counter)
-        self.projects_vm.current_project_changed.connect(self.knots_vm.handle_project_changed)
         self.boards_vm.current_board_changed.connect(self.knots_vm.handle_board_changed)
 
         # Hidden panel (compact view)
