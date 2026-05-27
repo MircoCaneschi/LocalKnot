@@ -6,7 +6,7 @@ Manages all board-related presentation state.
 
 from PySide6.QtCore import QObject, Signal, Slot, Property
 from typing import List
-from core.repository import BoardRepository
+from core.repository import BoardRepository, KnotRepository
 from mvvm.models import Board
 
 
@@ -23,6 +23,7 @@ class BoardsViewModel(QObject):
     board_data_changed = Signal()
     board_error = Signal(str)
     board_saved = Signal(str)
+    validation_failed = Signal(list)
     board_editable_changed = Signal(bool)
     current_board_changed = Signal(str)
     hide_messages = Signal()
@@ -30,10 +31,11 @@ class BoardsViewModel(QObject):
 
     # ==================== CONSTRUCTOR ====================
 
-    def __init__(self, repository: BoardRepository):
-        """Initialize the BoardsViewModel with repository."""
+    def __init__(self, repository: BoardRepository, knot_repo: KnotRepository = None):
+        """Initialize the BoardsViewModel with repositories."""
         super().__init__()
         self.repo = repository
+        self.knot_repo = knot_repo
 
         # Internal state
         self._boards = []
@@ -209,6 +211,18 @@ class BoardsViewModel(QObject):
             self.board_error.emit("Board already exists!")
             return
 
+        # Check > 0 condition for new boards
+        if self._board_editable:
+            invalid_fields = []
+            if self._height <= 0: invalid_fields.append("Height")
+            if self._base <= 0: invalid_fields.append("Base")
+            if self._length <= 0: invalid_fields.append("Length")
+            
+            if invalid_fields:
+                self.board_error.emit(f"Fields {', '.join(invalid_fields)} must be greater than 0.")
+                self.validation_failed.emit(invalid_fields)
+                return
+
         try:
             board = Board(
                 board_no=board_text,
@@ -219,9 +233,21 @@ class BoardsViewModel(QObject):
                 comment=self._comment
             )
 
+            # We already validated new boards > 0 above, 
+            # this remains for general type validation (>=0)
             if not board.validate_measurements():
                 self.board_error.emit("Invalid measurements! Height, base, and length must be numbers >= 0.")
                 return
+
+            # Check if any existing knot has an X greater than the new length
+            if not self._board_editable and self.knot_repo:
+                knots = self.knot_repo.get_all_knots(board_text, self._current_project)
+                invalid_knots = [k for k in knots if k.x > self._length]
+                if invalid_knots:
+                    knot_nos = ", ".join([str(k.knot_no) for k in invalid_knots])
+                    self.board_error.emit(f"Cannot save: knots [{knot_nos}] have an X position greater than the new length ({self._length}).")
+                    self.validation_failed.emit(["Length"])
+                    return
 
             if self._board_editable:
                 # Creating a new board

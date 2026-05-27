@@ -45,6 +45,11 @@ class KnotsView:
         self.hidden_pith_z_line = None
         self.hidden_pith_y_line = None
         self.hidden_fake_pith = None
+        
+        # Label references for animation
+        self.x_label = None
+        self.hidden_x_label = None
+        self._animations = []
 
         # Setup UI
         self._setup_main_layout()
@@ -119,7 +124,8 @@ class KnotsView:
         self.fake_pith = QCheckBox()
         self.fake_pith.setChecked(False)
 
-        data_layout.addRow("X", self.x_line)
+        self.x_label = QLabel("X")
+        data_layout.addRow(self.x_label, self.x_line)
         data_layout.addRow("Pith Z", self.pith_z_line)
         data_layout.addRow("Pith Y", self.pith_y_line)
         data_layout.addRow("Comment", self.comment_line)
@@ -132,9 +138,9 @@ class KnotsView:
 
         # grid disposition
         self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
-        self.main_layout.addWidget(self.knot_msg, 2, 0, 1, 1)
         self.main_layout.addLayout(crud_layout, 1, 1, 3, 1)
         self.main_layout.addLayout(data_layout, 0, 2, 6, 1)
+        self.main_layout.addWidget(self.knot_msg, 4, 0, 1, 2)
 
     def _setup_hidden_layout(self):
         """Create and layout all hidden panel UI components."""
@@ -182,7 +188,9 @@ class KnotsView:
         pith_z.setContentsMargins(5, 0, 0, 0)
         pith_y = QFormLayout()
         pith_y.setContentsMargins(5, 0, 0, 0)
-        x.addRow("X", self.hidden_x_line)
+        
+        self.hidden_x_label = QLabel("X")
+        x.addRow(self.hidden_x_label, self.hidden_x_line)
         pith_z.addRow("Pith Z", self.hidden_pith_z_line)
         pith_y.addRow("Pith Y", self.hidden_pith_y_line)
         hidden_data_layout.addLayout(x)
@@ -249,6 +257,7 @@ class KnotsView:
         self.view_model.current_knot_changed.connect(self._on_current_knot_changed)
         self.view_model.hide_messages.connect(self.knot_msg.hide)
         self.view_model.save_enabled_changed.connect(self.save_btn.setEnabled)
+        self.view_model.validation_failed.connect(self._on_validation_failed)
 
     # ==================== SIGNAL HANDLERS ====================
 
@@ -327,6 +336,30 @@ class KnotsView:
         self.hidden_knot_no_combo.setCurrentText(text)
         self.knot_no_combo.blockSignals(False)
         self.hidden_knot_no_combo.blockSignals(False)
+
+    def _on_validation_failed(self, invalid_fields: list):
+        """Flash the labels of the invalid fields."""
+        from PySide6.QtCore import QVariantAnimation, QAbstractAnimation
+        from PySide6.QtGui import QColor
+
+        def _flash_label(label: QLabel):
+            if not label: return
+            anim = QVariantAnimation(label)
+            anim.setDuration(300)
+            anim.setStartValue(QColor("red"))
+            anim.setEndValue(label.palette().color(label.foregroundRole()))
+            anim.setLoopCount(3)
+            
+            self._animations.append(anim)
+            anim.finished.connect(lambda a=anim: self._animations.remove(a) if a in self._animations else None)
+            anim.finished.connect(lambda l=label: l.setStyleSheet(""))
+            anim.valueChanged.connect(lambda color, l=label: l.setStyleSheet(f"color: {color.name()};"))
+            anim.start(QAbstractAnimation.DeleteWhenStopped)
+
+        if "X" in invalid_fields:
+            _flash_label(self.x_label)
+            _flash_label(self.hidden_x_label)
+            _flash_label(self.knot_msg)
 
     def set_knot_editable(self, state: bool):
         """Enable or disable editing for knot combobox and buttons."""

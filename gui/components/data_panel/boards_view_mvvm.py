@@ -45,6 +45,15 @@ class BoardsView:
         self.hidden_height_line = None
         self.hidden_base_line = None
         self.hidden_length_line = None
+        
+        # Label references for animation
+        self.height_label = None
+        self.base_label = None
+        self.length_label = None
+        self.hidden_height_label = None
+        self.hidden_base_label = None
+        self.hidden_length_label = None
+        self._animations = []
 
         # Setup UI
         self._setup_main_layout()
@@ -119,9 +128,13 @@ class BoardsView:
         self.length_line.setValidator(QRegularExpressionValidator(float_regex))
         self.testpos_line.setValidator(QIntValidator(0, 999999))
         
-        data_layout.addRow("Height", self.height_line)
-        data_layout.addRow("Base", self.base_line)
-        data_layout.addRow("Length", self.length_line)
+        self.height_label = QLabel("Height")
+        self.base_label = QLabel("Base")
+        self.length_label = QLabel("Length")
+        
+        data_layout.addRow(self.height_label, self.height_line)
+        data_layout.addRow(self.base_label, self.base_line)
+        data_layout.addRow(self.length_label, self.length_line)
         data_layout.addRow("TestPos", self.testpos_line)
         data_layout.addRow("Comment", self.comment_line)
 
@@ -132,9 +145,9 @@ class BoardsView:
 
         # grid disposition
         self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
-        self.main_layout.addWidget(self.board_msg, 2, 0, 1, 1)
         self.main_layout.addLayout(crud_layout, 1, 1, 3, 1)
         self.main_layout.addLayout(data_layout, 0, 2, 6, 1)
+        self.main_layout.addWidget(self.board_msg, 4, 0, 1, 2)
 
     def _setup_hidden_layout(self):
         """Create and layout all hidden panel UI components."""
@@ -183,9 +196,13 @@ class BoardsView:
         base.setContentsMargins(5, 0, 0, 0)
         length = QFormLayout()
         length.setContentsMargins(5, 0, 0, 0)
-        height.addRow("Height", self.hidden_height_line)
-        base.addRow("Base", self.hidden_base_line)
-        length.addRow("Length", self.hidden_length_line)
+        self.hidden_height_label = QLabel("Height")
+        self.hidden_base_label = QLabel("Base")
+        self.hidden_length_label = QLabel("Length")
+        
+        height.addRow(self.hidden_height_label, self.hidden_height_line)
+        base.addRow(self.hidden_base_label, self.hidden_base_line)
+        length.addRow(self.hidden_length_label, self.hidden_length_line)
         hidden_data_layout.addLayout(height)
         hidden_data_layout.addLayout(base)
         hidden_data_layout.addLayout(length)
@@ -242,6 +259,7 @@ class BoardsView:
         self.view_model.current_board_changed.connect(self._on_current_board_changed)
         self.view_model.hide_messages.connect(self.board_msg.hide)
         self.view_model.save_enabled_changed.connect(self.save_btn.setEnabled)
+        self.view_model.validation_failed.connect(self._on_validation_failed)
 
     # ==================== SIGNAL HANDLERS ====================
 
@@ -324,6 +342,35 @@ class BoardsView:
         self.hidden_board_no_combo.setCurrentText(text)
         self.board_no_combo.blockSignals(False)
         self.hidden_board_no_combo.blockSignals(False)
+
+    def _on_validation_failed(self, invalid_fields: list):
+        """Flash the labels of the invalid fields."""
+        from PySide6.QtCore import QVariantAnimation, QAbstractAnimation
+        from PySide6.QtGui import QColor
+
+        def _flash_label(label: QLabel):
+            if not label: return
+            anim = QVariantAnimation(label)
+            anim.setDuration(300)
+            anim.setStartValue(QColor("red"))
+            anim.setEndValue(label.palette().color(label.foregroundRole()))
+            anim.setLoopCount(3)
+            
+            self._animations.append(anim)
+            anim.finished.connect(lambda a=anim: self._animations.remove(a) if a in self._animations else None)
+            anim.finished.connect(lambda l=label: l.setStyleSheet(""))
+            anim.valueChanged.connect(lambda color, l=label: l.setStyleSheet(f"color: {color.name()};"))
+            anim.start(QAbstractAnimation.DeleteWhenStopped)
+
+        if "Height" in invalid_fields:
+            _flash_label(self.height_label)
+            _flash_label(self.hidden_height_label)
+        if "Base" in invalid_fields:
+            _flash_label(self.base_label)
+            _flash_label(self.hidden_base_label)
+        if "Length" in invalid_fields:
+            _flash_label(self.length_label)
+            _flash_label(self.hidden_length_label)
 
     def set_board_editable(self, state: bool):
         """Enable or disable editing for board combobox and buttons."""

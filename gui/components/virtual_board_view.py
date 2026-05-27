@@ -7,6 +7,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIntValidator
 
 from mvvm.viewmodels.virtual_board_vm import VirtualBoardViewModel
+from mvvm.viewmodels.knots_viewmodel import KnotsViewModel
 
 class VirtualBoardView(QWidget):
     """
@@ -14,9 +15,10 @@ class VirtualBoardView(QWidget):
     data for the board and the current knot.
     Contains a QGraphicsView in the center and 12 LineEdits on the sides.
     """
-    def __init__(self, view_model: VirtualBoardViewModel):
+    def __init__(self, view_model: VirtualBoardViewModel, knots_vm: KnotsViewModel = None):
         super().__init__()
         self.view_model = view_model
+        self.knots_vm = knots_vm
         
         self.setup_ui()
         self.bind_view_model()
@@ -36,20 +38,34 @@ class VirtualBoardView(QWidget):
         # Helper function to create a group of 3 line edits (z1, z2, dmin)
         def create_side_inputs(side_name, orientation="horizontal"):
             container = QWidget()
-            layout = QHBoxLayout(container) if orientation == "horizontal" else QVBoxLayout(container)
-            layout.setContentsMargins(5, 5, 5, 5)
+            container.setObjectName("SideInputContainer")
             
             group_inputs = {}
-            for field in ["z1", "z2", "dmin"]:
-                form = QFormLayout()
-                form.setContentsMargins(0, 0, 0, 0)
-                line_edit = QLineEdit()
-                line_edit.setValidator(validator)
-                line_edit.setMaximumWidth(60)
-                form.addRow(f"{field}:", line_edit)
-                layout.addLayout(form)
-                group_inputs[field] = line_edit
-                
+            
+            if orientation == "horizontal":
+                layout = QHBoxLayout(container)
+                layout.setContentsMargins(5, 5, 5, 5)
+                for field in ["z1", "z2", "dmin"]:
+                    form = QFormLayout()
+                    form.setContentsMargins(0, 0, 0, 0)
+                    line_edit = QLineEdit()
+                    line_edit.setValidator(validator)
+                    line_edit.setMaximumWidth(60)
+                    form.addRow(f"{field}:", line_edit)
+                    layout.addLayout(form)
+                    group_inputs[field] = line_edit
+            else:
+                layout = QFormLayout(container)
+                layout.setContentsMargins(5, 5, 5, 5)
+                # Align labels to the right so they stick close to the line edits
+                layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+                for field in ["z1", "z2", "dmin"]:
+                    line_edit = QLineEdit()
+                    line_edit.setValidator(validator)
+                    line_edit.setMaximumWidth(60)
+                    layout.addRow(f"{field}:", line_edit)
+                    group_inputs[field] = line_edit
+                    
             self.inputs[side_name] = group_inputs
             return container
 
@@ -69,15 +85,121 @@ class VirtualBoardView(QWidget):
         # row 0: empty, top, empty
         # row 1: left, center, right
         # row 2: empty, bottom, empty
-        grid_layout.addWidget(top_widget, 0, 1, alignment=Qt.AlignmentFlag.AlignCenter)
-        grid_layout.addWidget(left_widget, 1, 0, alignment=Qt.AlignmentFlag.AlignCenter)
+        grid_layout.addWidget(top_widget, 0, 1, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+        grid_layout.addWidget(left_widget, 1, 0, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         grid_layout.addWidget(self.graphics_view, 1, 1)
-        grid_layout.addWidget(right_widget, 1, 2, alignment=Qt.AlignmentFlag.AlignCenter)
-        grid_layout.addWidget(bottom_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignCenter)
+        grid_layout.addWidget(right_widget, 1, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        grid_layout.addWidget(bottom_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
+        # Error Message Label (Prominent Banner at the top)
+        self.error_msg = QLabel()
+        self.error_msg.setStyleSheet(
+            "color: #d32f2f; "
+            "font-weight: bold; "
+            "font-size: 13px; "
+            "background-color: #ffebee; "
+            "padding: 8px; "
+            "border-radius: 4px; "
+            "border: 1px solid #ffcdd2;"
+        )
+        self.error_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.error_msg.setWordWrap(True)
+        self.error_msg.hide()
+        
+        main_layout.addWidget(self.error_msg)
         main_layout.addLayout(grid_layout, stretch=1)
 
 
     def bind_view_model(self):
         # We will connect the view_model signals to the line edits and graphics here
-        pass
+        if not self.knots_vm:
+            return
+
+        # 1. View -> ViewModel: When user types, update ViewModel property
+        def connect_input_to_vm(field_name: str, line_edit: QLineEdit):
+            line_edit.textEdited.connect(lambda text: setattr(self.knots_vm, field_name, text))
+
+        for side, group in self.inputs.items():
+            # side e.g. "side1_top" -> prefix "side1"
+            prefix = side.split("_")[0] 
+            for field, le in group.items():
+                prop_name = f"{prefix}_{field}" # e.g. "side1_z1"
+                connect_input_to_vm(prop_name, le)
+
+        # 2. ViewModel -> View: When node data loads, update UI
+        def update_ui_from_vm():
+            for side, group in self.inputs.items():
+                prefix = side.split("_")[0]
+                for field, le in group.items():
+                    prop_name = f"{prefix}_{field}"
+                    val = getattr(self.knots_vm, prop_name, 0)
+                    
+                    # Block signals so setting text doesn't trigger textEdited -> _mark_dirty
+                    le.blockSignals(True)
+                    le.setText(str(val) if val != 0 else "0")
+                    le.blockSignals(False)
+
+        self.knots_vm.knot_data_changed.connect(update_ui_from_vm)
+        self.knots_vm.validation_failed.connect(self._on_validation_failed)
+        self.knots_vm.virtual_board_error.connect(self._on_virtual_board_error)
+        self.knots_vm.hide_messages.connect(self.error_msg.hide)
+        
+        # Initial sync
+        update_ui_from_vm()
+
+    def _on_virtual_board_error(self, msg: str):
+        """Show error message and flash it."""
+        from PySide6.QtCore import QVariantAnimation, QAbstractAnimation
+        from PySide6.QtGui import QColor
+
+        self.error_msg.setText(msg)
+        self.error_msg.show()
+
+        anim = QVariantAnimation(self.error_msg)
+        anim.setDuration(300)
+        anim.setStartValue(QColor("red"))
+        # we interpolate to a transparent color to simulate blinking
+        anim.setEndValue(QColor(0, 0, 0, 0)) 
+        anim.setLoopCount(3)
+        
+        if not hasattr(self, '_animations'):
+            self._animations = []
+        self._animations.append(anim)
+        anim.finished.connect(lambda a=anim: self._animations.remove(a) if a in self._animations else None)
+        anim.finished.connect(lambda: self.error_msg.setStyleSheet(
+            "color: #d32f2f; font-weight: bold; font-size: 13px; "
+            "background-color: #ffebee; padding: 8px; border-radius: 4px; border: 1px solid #ffcdd2;"
+        ))
+        anim.valueChanged.connect(lambda color: self.error_msg.setStyleSheet(
+            f"color: {color.name()}; font-weight: bold; font-size: 13px; "
+            f"background-color: #ffebee; padding: 8px; border-radius: 4px; border: 1px solid {color.name()};"
+        ))
+        anim.start(QAbstractAnimation.DeleteWhenStopped)
+
+    def _on_validation_failed(self, invalid_fields: list):
+        """Flash the specific line edits if they failed validation."""
+        from PySide6.QtCore import QVariantAnimation, QAbstractAnimation
+        from PySide6.QtGui import QColor
+
+        def _flash_widget(widget):
+            if not widget: return
+            anim = QVariantAnimation(widget)
+            anim.setDuration(300)
+            anim.setStartValue(QColor("red"))
+            anim.setEndValue(widget.palette().color(widget.foregroundRole()))
+            anim.setLoopCount(3)
+            
+            if not hasattr(self, '_animations'):
+                self._animations = []
+            self._animations.append(anim)
+            anim.finished.connect(lambda a=anim: self._animations.remove(a) if a in self._animations else None)
+            anim.finished.connect(lambda w=widget: w.setStyleSheet(""))
+            anim.valueChanged.connect(lambda color, w=widget: w.setStyleSheet(f"color: {color.name()};"))
+            anim.start(QAbstractAnimation.DeleteWhenStopped)
+
+        for side, group in self.inputs.items():
+            prefix = side.split("_")[0]
+            for field, le in group.items():
+                prop_name = f"{prefix}_{field}"
+                if prop_name in invalid_fields:
+                    _flash_widget(le)

@@ -6,7 +6,7 @@ Manages all knot-related presentation state.
 
 from PySide6.QtCore import QObject, Signal, Slot, Property
 from typing import List
-from core.repository import KnotRepository
+from core.repository import KnotRepository, BoardRepository
 from mvvm.models import Knot
 
 
@@ -37,6 +37,8 @@ class KnotsViewModel(QObject):
     # Emitted on successful save
     knot_saved = Signal(str)
 
+    validation_failed = Signal(list)
+    virtual_board_error = Signal(str)
     knot_editable_changed = Signal(bool)
     current_knot_changed = Signal(str)
     hide_messages = Signal()
@@ -44,10 +46,11 @@ class KnotsViewModel(QObject):
 
     # ==================== CONSTRUCTOR ====================
 
-    def __init__(self, repository: KnotRepository):
-        """Initialize the KnotsViewModel with repository."""
+    def __init__(self, repository: KnotRepository, board_repo: BoardRepository = None):
+        """Initialize the KnotsViewModel with repositories."""
         super().__init__()
         self.repo = repository
+        self.board_repo = board_repo
 
         # Internal state
         self._knots = []
@@ -57,6 +60,18 @@ class KnotsViewModel(QObject):
         self._pith_y = 0
         self._is_fake_pith = False
         self._comment = ""
+        self._side1_z1 = 0
+        self._side1_z2 = 0
+        self._side1_dmin = 0
+        self._side2_z1 = 0
+        self._side2_z2 = 0
+        self._side2_dmin = 0
+        self._side3_z1 = 0
+        self._side3_z2 = 0
+        self._side3_dmin = 0
+        self._side4_z1 = 0
+        self._side4_z2 = 0
+        self._side4_dmin = 0
         self._knot_editable = False
         self._current_project = ""
         self._current_board = ""
@@ -168,6 +183,174 @@ class KnotsViewModel(QObject):
             self._comment = value
             self._mark_dirty()
 
+    @Property(int)
+    def side1_z1(self) -> int:
+        return self._side1_z1
+
+    @side1_z1.setter
+    def side1_z1(self, value: int):
+        try:
+            val = int(value)
+            if self._side1_z1 != val:
+                self._side1_z1 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side1_z2(self) -> int:
+        return self._side1_z2
+
+    @side1_z2.setter
+    def side1_z2(self, value: int):
+        try:
+            val = int(value)
+            if self._side1_z2 != val:
+                self._side1_z2 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side1_dmin(self) -> int:
+        return self._side1_dmin
+
+    @side1_dmin.setter
+    def side1_dmin(self, value: int):
+        try:
+            val = int(value)
+            if self._side1_dmin != val:
+                self._side1_dmin = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side2_z1(self) -> int:
+        return self._side2_z1
+
+    @side2_z1.setter
+    def side2_z1(self, value: int):
+        try:
+            val = int(value)
+            if self._side2_z1 != val:
+                self._side2_z1 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side2_z2(self) -> int:
+        return self._side2_z2
+
+    @side2_z2.setter
+    def side2_z2(self, value: int):
+        try:
+            val = int(value)
+            if self._side2_z2 != val:
+                self._side2_z2 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side2_dmin(self) -> int:
+        return self._side2_dmin
+
+    @side2_dmin.setter
+    def side2_dmin(self, value: int):
+        try:
+            val = int(value)
+            if self._side2_dmin != val:
+                self._side2_dmin = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side3_z1(self) -> int:
+        return self._side3_z1
+
+    @side3_z1.setter
+    def side3_z1(self, value: int):
+        try:
+            val = int(value)
+            if self._side3_z1 != val:
+                self._side3_z1 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side3_z2(self) -> int:
+        return self._side3_z2
+
+    @side3_z2.setter
+    def side3_z2(self, value: int):
+        try:
+            val = int(value)
+            if self._side3_z2 != val:
+                self._side3_z2 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side3_dmin(self) -> int:
+        return self._side3_dmin
+
+    @side3_dmin.setter
+    def side3_dmin(self, value: int):
+        try:
+            val = int(value)
+            if self._side3_dmin != val:
+                self._side3_dmin = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side4_z1(self) -> int:
+        return self._side4_z1
+
+    @side4_z1.setter
+    def side4_z1(self, value: int):
+        try:
+            val = int(value)
+            if self._side4_z1 != val:
+                self._side4_z1 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side4_z2(self) -> int:
+        return self._side4_z2
+
+    @side4_z2.setter
+    def side4_z2(self, value: int):
+        try:
+            val = int(value)
+            if self._side4_z2 != val:
+                self._side4_z2 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(int)
+    def side4_dmin(self) -> int:
+        return self._side4_dmin
+
+    @side4_dmin.setter
+    def side4_dmin(self, value: int):
+        try:
+            val = int(value)
+            if self._side4_dmin != val:
+                self._side4_dmin = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
     # ==================== SLOTS ====================
 
     @Slot(str)
@@ -214,6 +397,18 @@ class KnotsViewModel(QObject):
         self._pith_y = 0
         self._is_fake_pith = False
         self._comment = ""
+        self._side1_z1 = 0
+        self._side1_z2 = 0
+        self._side1_dmin = 0
+        self._side2_z1 = 0
+        self._side2_z2 = 0
+        self._side2_dmin = 0
+        self._side3_z1 = 0
+        self._side3_z2 = 0
+        self._side3_dmin = 0
+        self._side4_z1 = 0
+        self._side4_z2 = 0
+        self._side4_dmin = 0
         self.knot_data_changed.emit()
 
     @Slot()
@@ -236,6 +431,80 @@ class KnotsViewModel(QObject):
             self.knot_error.emit("Knot already exists!")
             return
 
+        # Check > 0 condition for new knots
+        if self._knot_editable:
+            invalid_fields = []
+            if self._x <= 0: invalid_fields.append("X")
+            
+            if invalid_fields:
+                self.knot_error.emit(f"Field X must be greater than 0.")
+                self.validation_failed.emit(invalid_fields)
+                return
+
+        board = None
+        if self.board_repo:
+            try:
+                board = self.board_repo.get_board_by_id(self._current_board, self._current_project)
+            except Exception:
+                pass
+                
+        board_height = board.height if board else float('inf')
+        board_base = board.base if board else float('inf')
+        board_length = board.length if board else float('inf')
+
+        # Check X <= length for all knots
+        if self._x > board_length:
+            self.knot_error.emit(f"Position X ({self._x}) cannot exceed board length ({board_length}).")
+            self.validation_failed.emit(["X"])
+            return
+        
+        invalid_fields = []
+        error_msgs = []
+        for side in range(1, 5):
+            side_name = str(side)
+            z1 = getattr(self, f'_side{side}_z1')
+            z2 = getattr(self, f'_side{side}_z2')
+            dmin = getattr(self, f'_side{side}_dmin')
+            
+            if z1 != 0 or z2 != 0 or dmin != 0:
+                if z1 <= 0:
+                    invalid_fields.append(f'side{side}_z1')
+                    error_msgs.append(f"Side {side_name}: z1 must be > 0")
+                
+                if (z1 != 0 or z2 != 0) and dmin <= 0:
+                    if f'side{side}_dmin' not in invalid_fields:
+                        invalid_fields.append(f'side{side}_dmin')
+                    error_msgs.append(f"Side {side_name}: dmin cannot be 0")
+                        
+                if dmin > (z2 - z1):
+                    if f'side{side}_dmin' not in invalid_fields:
+                        invalid_fields.append(f'side{side}_dmin')
+                    error_msgs.append(f"Side {side_name}: dmin must be <= (z2 - z1)")
+                    
+                if side in (1, 3) and z2 > board_height:
+                    invalid_fields.append(f'side{side}_z2')
+                    error_msgs.append(f"Side {side_name}: z2 ({z2}) exceeds board height ({board_height})")
+                elif side in (2, 4) and z2 > board_base:
+                    invalid_fields.append(f'side{side}_z2')
+                    error_msgs.append(f"Side {side_name}: z2 ({z2}) exceeds board base ({board_base})")
+                    
+        if invalid_fields:
+            self.validation_failed.emit(invalid_fields)
+            
+            panel_fields = [f for f in invalid_fields if not f.startswith('side')]
+            vb_fields = [f for f in invalid_fields if f.startswith('side')]
+            
+            if panel_fields:
+                self.knot_error.emit('Field X must be greater than 0.')
+            if vb_fields:
+                # Limit to 3 messages to avoid UI breaking, add "..." if more
+                if len(error_msgs) > 3:
+                    error_text = '\n'.join(error_msgs[:3]) + '\n... and other errors.'
+                else:
+                    error_text = '\n'.join(error_msgs)
+                self.virtual_board_error.emit(error_text)
+            return
+
         try:
             knot = Knot(
                 knot_no=knot_text,
@@ -243,7 +512,11 @@ class KnotsViewModel(QObject):
                 pith_z=self._pith_z,
                 pith_y=self._pith_y,
                 is_fake_pith=self._is_fake_pith,
-                comment=self._comment
+                comment=self._comment,
+                side1_z1=self._side1_z1, side1_z2=self._side1_z2, side1_dmin=self._side1_dmin,
+                side2_z1=self._side2_z1, side2_z2=self._side2_z2, side2_dmin=self._side2_dmin,
+                side3_z1=self._side3_z1, side3_z2=self._side3_z2, side3_dmin=self._side3_dmin,
+                side4_z1=self._side4_z1, side4_z2=self._side4_z2, side4_dmin=self._side4_dmin
             )
 
             if not knot.validate_coordinates():
@@ -314,6 +587,18 @@ class KnotsViewModel(QObject):
                 self._pith_y = knot.pith_y
                 self._is_fake_pith = knot.is_fake_pith
                 self._comment = knot.comment
+                self._side1_z1 = knot.side1_z1
+                self._side1_z2 = knot.side1_z2
+                self._side1_dmin = knot.side1_dmin
+                self._side2_z1 = knot.side2_z1
+                self._side2_z2 = knot.side2_z2
+                self._side2_dmin = knot.side2_dmin
+                self._side3_z1 = knot.side3_z1
+                self._side3_z2 = knot.side3_z2
+                self._side3_dmin = knot.side3_dmin
+                self._side4_z1 = knot.side4_z1
+                self._side4_z2 = knot.side4_z2
+                self._side4_dmin = knot.side4_dmin
                 self.knot_data_changed.emit()
                 self.knot_selected.emit(knot_no)
                 self.save_enabled_changed.emit(False)
@@ -361,6 +646,18 @@ class KnotsViewModel(QObject):
                 self._pith_y = knot.pith_y
                 self._is_fake_pith = knot.is_fake_pith
                 self._comment = knot.comment
+                self._side1_z1 = knot.side1_z1
+                self._side1_z2 = knot.side1_z2
+                self._side1_dmin = knot.side1_dmin
+                self._side2_z1 = knot.side2_z1
+                self._side2_z2 = knot.side2_z2
+                self._side2_dmin = knot.side2_dmin
+                self._side3_z1 = knot.side3_z1
+                self._side3_z2 = knot.side3_z2
+                self._side3_dmin = knot.side3_dmin
+                self._side4_z1 = knot.side4_z1
+                self._side4_z2 = knot.side4_z2
+                self._side4_dmin = knot.side4_dmin
                 return True
             return False
         except:

@@ -351,9 +351,23 @@ class KnotRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_board = ? AND id_project = ?", (board_id, project_id))
+                cursor.execute(
+                    "SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith, "
+                    "side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, "
+                    "side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin "
+                    "FROM knot WHERE id_board = ? AND id_project = ?", 
+                    (board_id, project_id)
+                )
                 rows = cursor.fetchall()
-                return [Knot(knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6]) for row in rows]
+                return [
+                    Knot(
+                        knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6],
+                        side1_z1=row[7], side1_z2=row[8], side1_dmin=row[9],
+                        side2_z1=row[10], side2_z2=row[11], side2_dmin=row[12],
+                        side3_z1=row[13], side3_z2=row[14], side3_dmin=row[15],
+                        side4_z1=row[16], side4_z2=row[17], side4_dmin=row[18]
+                    ) for row in rows
+                ]
         except Exception as e:
             raise Exception(f"Failed to get knots: {str(e)}")
 
@@ -362,22 +376,41 @@ class KnotRepository:
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith FROM knot WHERE id_nodo = ? AND id_board = ? AND id_project = ?", (knot_id, board_id, project_id))
+                cursor.execute(
+                    "SELECT id_nodo, id_board, x, pith_z, pith_y, comment, fake_pith, "
+                    "side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, "
+                    "side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin "
+                    "FROM knot WHERE id_nodo = ? AND id_board = ? AND id_project = ?", 
+                    (knot_id, board_id, project_id)
+                )
                 row = cursor.fetchone()
                 if row:
-                    return Knot(knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6])
+                    return Knot(
+                        knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_fake_pith=row[6],
+                        side1_z1=row[7], side1_z2=row[8], side1_dmin=row[9],
+                        side2_z1=row[10], side2_z2=row[11], side2_dmin=row[12],
+                        side3_z1=row[13], side3_z2=row[14], side3_dmin=row[15],
+                        side4_z1=row[16], side4_z2=row[17], side4_dmin=row[18]
+                    )
                 return None
         except Exception as e:
             raise Exception(f"Failed to get knot: {str(e)}")
 
     def add_knot(self, knot: Knot, board_id: str, project_id: str) -> bool:
-        """Add a new knot to database."""
+        """Add a new knot."""
         try:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO knot (id_nodo, id_board, id_project, x, pith_z, pith_y, comment, fake_pith, side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)",
-                    (knot.knot_no, board_id, project_id, knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith)
+                    "INSERT INTO knot (id_nodo, id_board, id_project, x, pith_z, pith_y, comment, fake_pith, "
+                    "side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, "
+                    "side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (knot.knot_no, board_id, project_id, knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith,
+                     knot.side1_z1, knot.side1_z2, knot.side1_dmin,
+                     knot.side2_z1, knot.side2_z2, knot.side2_dmin,
+                     knot.side3_z1, knot.side3_z2, knot.side3_dmin,
+                     knot.side4_z1, knot.side4_z2, knot.side4_dmin)
                 )
                 conn.commit()
             return True
@@ -390,8 +423,18 @@ class KnotRepository:
             with self.db.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, fake_pith = ? WHERE id_nodo = ? AND id_board = ? AND id_project = ?",
-                    (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith, knot.knot_no, board_id, project_id)
+                    "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, fake_pith = ?, "
+                    "side1_z1 = ?, side1_z2 = ?, side1_dmin = ?, "
+                    "side2_z1 = ?, side2_z2 = ?, side2_dmin = ?, "
+                    "side3_z1 = ?, side3_z2 = ?, side3_dmin = ?, "
+                    "side4_z1 = ?, side4_z2 = ?, side4_dmin = ? "
+                    "WHERE id_nodo = ? AND id_board = ? AND id_project = ?",
+                    (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_fake_pith,
+                     knot.side1_z1, knot.side1_z2, knot.side1_dmin,
+                     knot.side2_z1, knot.side2_z2, knot.side2_dmin,
+                     knot.side3_z1, knot.side3_z2, knot.side3_dmin,
+                     knot.side4_z1, knot.side4_z2, knot.side4_dmin,
+                     knot.knot_no, board_id, project_id)
                 )
                 conn.commit()
             return True

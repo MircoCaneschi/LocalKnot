@@ -44,8 +44,8 @@ class MainWindow(QMainWindow):
 
         # Create ViewModels
         self.projects_vm = ProjectsViewModel(self.project_repo)
-        self.boards_vm = BoardsViewModel(self.board_repo)
-        self.knots_vm = KnotsViewModel(self.knot_repo)
+        self.boards_vm = BoardsViewModel(self.board_repo, self.knot_repo)
+        self.knots_vm = KnotsViewModel(self.knot_repo, self.board_repo)
 
         # Create Views
         self.projects_view = ProjectsView(self.projects_vm)
@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
         self.knot_results_view = KnotResultsView(self.virtual_board_vm)
         self.main_layout.addWidget(self.knot_results_view)
         
-        self.virtual_board_view = VirtualBoardView(self.virtual_board_vm)
+        self.virtual_board_view = VirtualBoardView(self.virtual_board_vm, self.knots_vm)
         self.main_layout.addWidget(self.virtual_board_view)
 
         # Trigger initial data load now that UI is fully initialized

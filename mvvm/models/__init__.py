@@ -140,11 +140,27 @@ class Knot:
         pith_y (float): Pith Y coordinate
         is_fake_pith (bool): Whether this is a fake pith
         comment (str): Additional notes about the knot
+        side1_z1 (int): Top z1 coordinate
+        side1_z2 (int): Top z2 coordinate
+        side1_dmin (int): Top dmin coordinate
+        side2_z1 (int): Right z1 coordinate
+        side2_z2 (int): Right z2 coordinate
+        side2_dmin (int): Right dmin coordinate
+        side3_z1 (int): Bottom z1 coordinate
+        side3_z2 (int): Bottom z2 coordinate
+        side3_dmin (int): Bottom dmin coordinate
+        side4_z1 (int): Left z1 coordinate
+        side4_z2 (int): Left z2 coordinate
+        side4_dmin (int): Left dmin coordinate
     """
 
     def __init__(self, knot_no: int | str, x: int = 0,
                  pith_z: int = 0, pith_y: int = 0,
-                 is_fake_pith: bool = False, comment: str = ""):
+                 is_fake_pith: bool = False, comment: str = "",
+                 side1_z1: int = 0, side1_z2: int = 0, side1_dmin: int = 0,
+                 side2_z1: int = 0, side2_z2: int = 0, side2_dmin: int = 0,
+                 side3_z1: int = 0, side3_z2: int = 0, side3_dmin: int = 0,
+                 side4_z1: int = 0, side4_z2: int = 0, side4_dmin: int = 0):
         """
         Initialize a Knot.
 
@@ -162,6 +178,20 @@ class Knot:
         self.pith_y = pith_y
         self.is_fake_pith = is_fake_pith
         self.comment = comment
+        
+        # Side parameters
+        self.side1_z1 = side1_z1
+        self.side1_z2 = side1_z2
+        self.side1_dmin = side1_dmin
+        self.side2_z1 = side2_z1
+        self.side2_z2 = side2_z2
+        self.side2_dmin = side2_dmin
+        self.side3_z1 = side3_z1
+        self.side3_z2 = side3_z2
+        self.side3_dmin = side3_dmin
+        self.side4_z1 = side4_z1
+        self.side4_z2 = side4_z2
+        self.side4_dmin = side4_dmin
 
     def validate_coordinates(self) -> bool:
         """

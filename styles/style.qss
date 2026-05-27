@@ -148,3 +148,8 @@ QFrame#ResultsDivider {
     max-height: 2px;
     border: none;
 }
+
+/* --- Virtual Board Side Inputs --- */
+QWidget#SideInputContainer QLabel {
+    font-weight: bold;
+}
