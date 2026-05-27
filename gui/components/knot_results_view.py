@@ -167,17 +167,51 @@ class KnotResultsView(QWidget):
 
 
     def _toggle_results(self):
-        """Shows or hides the results panel."""
+        """Shows or hides the results panel with a smooth slide animation."""
+        from PySide6.QtCore import QPropertyAnimation, QEasingCurve
+        
+        # Initialize animation object if it doesn't exist
+        if not hasattr(self, 'anim'):
+            self.anim = QPropertyAnimation(self.results_group, b"maximumHeight")
+            self.anim.setDuration(300)
+            self.anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+            self.anim.finished.connect(self._on_animation_finished)
+            self._is_collapsing = False
+            
         if self.results_group.isVisible():
-            self.results_group.hide()
+            # Setup collapse animation
+            self._is_collapsing = True
+            self.anim.setStartValue(self.results_group.height())
+            self.anim.setEndValue(0)
+            self.anim.start()
+            
             self.toggle_results_btn.setText("Show parameters")
             icon_down = self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarUnshadeButton)
             self.toggle_results_btn.setIcon(icon_down)
         else:
+            # Setup expand animation
+            self._is_collapsing = False
             self.results_group.show()
+            
+            # Reset max height temporarily to get accurate size hint
+            self.results_group.setMaximumHeight(16777215)
+            target_height = self.results_group.sizeHint().height()
+            
+            self.results_group.setMaximumHeight(0)
+            self.anim.setStartValue(0)
+            self.anim.setEndValue(target_height)
+            self.anim.start()
+            
             self.toggle_results_btn.setText("Hide parameters")
             icon_up = self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarShadeButton)
             self.toggle_results_btn.setIcon(icon_up)
+
+    def _on_animation_finished(self):
+        """Handle cleanup after animation completes."""
+        if self._is_collapsing:
+            self.results_group.hide()
+        # Reset maximum height so the layout can resize naturally if the window is resized
+        self.results_group.setMaximumHeight(16777215)
 
     def bind_view_model(self):
         # Connect the view_model signal to update the labels

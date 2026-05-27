@@ -140,13 +140,73 @@ class MainWindow(QMainWindow):
 
 
     def _toggle_data_panel(self):
-        """Manages the visibility of the top data panel."""
+        """Manages the visibility of the top data panel with a smooth animation."""
+        from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QParallelAnimationGroup
+        
+        # Initialize animation group if it doesn't exist
+        if not hasattr(self, 'panel_anim_group'):
+            self.panel_anim_group = QParallelAnimationGroup(self)
+            
+            self.anim_main = QPropertyAnimation(self.data_panel_container, b"maximumHeight")
+            self.anim_main.setDuration(300)
+            self.anim_main.setEasingCurve(QEasingCurve.Type.InOutQuad)
+            
+            self.anim_hidden = QPropertyAnimation(self.hidden_data_panel_container, b"maximumHeight")
+            self.anim_hidden.setDuration(300)
+            self.anim_hidden.setEasingCurve(QEasingCurve.Type.InOutQuad)
+            
+            self.panel_anim_group.addAnimation(self.anim_main)
+            self.panel_anim_group.addAnimation(self.anim_hidden)
+            self.panel_anim_group.finished.connect(self._on_panel_animation_finished)
+            self._is_main_panel_collapsing = False
+
         if self.data_panel_container.isVisible():
-            self.data_panel_container.hide()
+            # Setup for collapsing main panel and expanding hidden panel
+            self._is_main_panel_collapsing = True
+            
+            # Show the hidden container to allow animation
             self.hidden_data_panel_container.show()
+            
+            # Calculate target height for the hidden panel
+            self.hidden_data_panel_container.setMaximumHeight(16777215)
+            hidden_target = self.hidden_data_panel_container.sizeHint().height()
+            
+            # Start values and end values
+            self.anim_main.setStartValue(self.data_panel_container.height())
+            self.anim_main.setEndValue(0)
+            
+            self.anim_hidden.setStartValue(0)
+            self.anim_hidden.setEndValue(hidden_target)
+            
+            self.panel_anim_group.start()
+        else:
+            # Setup for expanding main panel and collapsing hidden panel
+            self._is_main_panel_collapsing = False
+            
+            # Show the main container to allow animation
+            self.data_panel_container.show()
+            
+            # Calculate target height for the main panel
+            self.data_panel_container.setMaximumHeight(16777215)
+            main_target = self.data_panel_container.sizeHint().height()
+            
+            # Start values and end values
+            self.anim_main.setStartValue(0)
+            self.anim_main.setEndValue(main_target)
+            
+            self.anim_hidden.setStartValue(self.hidden_data_panel_container.height())
+            self.anim_hidden.setEndValue(0)
+            
+            self.panel_anim_group.start()
+
+    def _on_panel_animation_finished(self):
+        """Cleanup after the panel animation finishes."""
+        if self._is_main_panel_collapsing:
+            self.data_panel_container.hide()
+            self.hidden_data_panel_container.setMaximumHeight(16777215)
         else:
             self.hidden_data_panel_container.hide()
-            self.data_panel_container.show()
+            self.data_panel_container.setMaximumHeight(16777215)
 
     def _update_project_counter(self, projects: list):
         """Update the counter in the project group box title."""
