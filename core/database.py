@@ -110,21 +110,21 @@ class DatabaseManager:
                     comment TEXT,
                     fake_pith BOOLEAN,
                     
-                    side1_z1 INTEGER NOT NULL,
-                    side1_z2 INTEGER NOT NULL,
-                    side1_dmin INTEGER NOT NULL,
+                    side1_z1 INTEGER,
+                    side1_z2 INTEGER,
+                    side1_dmin INTEGER,
                     
-                    side2_z1 INTEGER NOT NULL,
-                    side2_z2 INTEGER NOT NULL,
-                    side2_dmin INTEGER NOT NULL,
+                    side2_z1 INTEGER,
+                    side2_z2 INTEGER,
+                    side2_dmin INTEGER,
                     
-                    side3_z1 INTEGER NOT NULL,
-                    side3_z2 INTEGER NOT NULL,
-                    side3_dmin INTEGER NOT NULL,
+                    side3_z1 INTEGER,
+                    side3_z2 INTEGER,
+                    side3_dmin INTEGER,
                     
-                    side4_z1 INTEGER NOT NULL,
-                    side4_z2 INTEGER NOT NULL,
-                    side4_dmin INTEGER NOT NULL,
+                    side4_z1 INTEGER,
+                    side4_z2 INTEGER,
+                    side4_dmin INTEGER,
                     PRIMARY KEY (id_nodo, id_board, id_project),
                     FOREIGN KEY (id_board, id_project) REFERENCES board (id_board, id_project) ON DELETE CASCADE
                 )

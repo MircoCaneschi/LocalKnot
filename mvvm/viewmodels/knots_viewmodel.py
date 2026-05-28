@@ -60,18 +60,18 @@ class KnotsViewModel(QObject):
         self._pith_y = 0
         self._is_fake_pith = False
         self._comment = ""
-        self._side1_z1 = 0
-        self._side1_z2 = 0
-        self._side1_dmin = 0
-        self._side2_z1 = 0
-        self._side2_z2 = 0
-        self._side2_dmin = 0
-        self._side3_z1 = 0
-        self._side3_z2 = 0
-        self._side3_dmin = 0
-        self._side4_z1 = 0
-        self._side4_z2 = 0
-        self._side4_dmin = 0
+        self._side1_z1 = None
+        self._side1_z2 = None
+        self._side1_dmin = None
+        self._side2_z1 = None
+        self._side2_z2 = None
+        self._side2_dmin = None
+        self._side3_z1 = None
+        self._side3_z2 = None
+        self._side3_dmin = None
+        self._side4_z1 = None
+        self._side4_z2 = None
+        self._side4_dmin = None
         self._knot_editable = False
         self._current_project = ""
         self._current_board = ""
@@ -183,168 +183,168 @@ class KnotsViewModel(QObject):
             self._comment = value
             self._mark_dirty()
 
-    @Property(int)
-    def side1_z1(self) -> int:
+    @Property(object)
+    def side1_z1(self):
         return self._side1_z1
 
     @side1_z1.setter
-    def side1_z1(self, value: int):
+    def side1_z1(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side1_z1 != val:
                 self._side1_z1 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side1_z2(self) -> int:
+    @Property(object)
+    def side1_z2(self):
         return self._side1_z2
 
     @side1_z2.setter
-    def side1_z2(self, value: int):
+    def side1_z2(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side1_z2 != val:
                 self._side1_z2 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side1_dmin(self) -> int:
+    @Property(object)
+    def side1_dmin(self):
         return self._side1_dmin
 
     @side1_dmin.setter
-    def side1_dmin(self, value: int):
+    def side1_dmin(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side1_dmin != val:
                 self._side1_dmin = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side2_z1(self) -> int:
+    @Property(object)
+    def side2_z1(self):
         return self._side2_z1
 
     @side2_z1.setter
-    def side2_z1(self, value: int):
+    def side2_z1(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side2_z1 != val:
                 self._side2_z1 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side2_z2(self) -> int:
+    @Property(object)
+    def side2_z2(self):
         return self._side2_z2
 
     @side2_z2.setter
-    def side2_z2(self, value: int):
+    def side2_z2(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side2_z2 != val:
                 self._side2_z2 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side2_dmin(self) -> int:
+    @Property(object)
+    def side2_dmin(self):
         return self._side2_dmin
 
     @side2_dmin.setter
-    def side2_dmin(self, value: int):
+    def side2_dmin(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side2_dmin != val:
                 self._side2_dmin = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side3_z1(self) -> int:
+    @Property(object)
+    def side3_z1(self):
         return self._side3_z1
 
     @side3_z1.setter
-    def side3_z1(self, value: int):
+    def side3_z1(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side3_z1 != val:
                 self._side3_z1 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side3_z2(self) -> int:
+    @Property(object)
+    def side3_z2(self):
         return self._side3_z2
 
     @side3_z2.setter
-    def side3_z2(self, value: int):
+    def side3_z2(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side3_z2 != val:
                 self._side3_z2 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side3_dmin(self) -> int:
+    @Property(object)
+    def side3_dmin(self):
         return self._side3_dmin
 
     @side3_dmin.setter
-    def side3_dmin(self, value: int):
+    def side3_dmin(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side3_dmin != val:
                 self._side3_dmin = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side4_z1(self) -> int:
+    @Property(object)
+    def side4_z1(self):
         return self._side4_z1
 
     @side4_z1.setter
-    def side4_z1(self, value: int):
+    def side4_z1(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side4_z1 != val:
                 self._side4_z1 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side4_z2(self) -> int:
+    @Property(object)
+    def side4_z2(self):
         return self._side4_z2
 
     @side4_z2.setter
-    def side4_z2(self, value: int):
+    def side4_z2(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side4_z2 != val:
                 self._side4_z2 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def side4_dmin(self) -> int:
+    @Property(object)
+    def side4_dmin(self):
         return self._side4_dmin
 
     @side4_dmin.setter
-    def side4_dmin(self, value: int):
+    def side4_dmin(self, value):
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._side4_dmin != val:
                 self._side4_dmin = val
                 self._mark_dirty()
@@ -397,18 +397,18 @@ class KnotsViewModel(QObject):
         self._pith_y = 0
         self._is_fake_pith = False
         self._comment = ""
-        self._side1_z1 = 0
-        self._side1_z2 = 0
-        self._side1_dmin = 0
-        self._side2_z1 = 0
-        self._side2_z2 = 0
-        self._side2_dmin = 0
-        self._side3_z1 = 0
-        self._side3_z2 = 0
-        self._side3_dmin = 0
-        self._side4_z1 = 0
-        self._side4_z2 = 0
-        self._side4_dmin = 0
+        self._side1_z1 = None
+        self._side1_z2 = None
+        self._side1_dmin = None
+        self._side2_z1 = None
+        self._side2_z2 = None
+        self._side2_dmin = None
+        self._side3_z1 = None
+        self._side3_z2 = None
+        self._side3_dmin = None
+        self._side4_z1 = None
+        self._side4_z2 = None
+        self._side4_dmin = None
         self.knot_data_changed.emit()
 
     @Slot()
@@ -466,27 +466,62 @@ class KnotsViewModel(QObject):
             z2 = getattr(self, f'_side{side}_z2')
             dmin = getattr(self, f'_side{side}_dmin')
             
-            if z1 != 0 or z2 != 0 or dmin != 0:
-                if z1 <= 0:
-                    invalid_fields.append(f'side{side}_z1')
-                    error_msgs.append(f"Side {side_name}: z1 must be > 0")
+            if z1 is not None or z2 is not None or dmin is not None:
+                # If any field is compiled, all must be compiled for that side
+                if z1 is None or z2 is None or dmin is None:
+                    if z1 is None and f'side{side}_z1' not in invalid_fields: invalid_fields.append(f'side{side}_z1')
+                    if z2 is None and f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
+                    if dmin is None and f'side{side}_dmin' not in invalid_fields: invalid_fields.append(f'side{side}_dmin')
+                    error_msgs.append(f"Side {side_name}: incomplete data. All 3 fields must be filled.")
+                    continue
                 
-                if (z1 != 0 or z2 != 0) and dmin <= 0:
-                    if f'side{side}_dmin' not in invalid_fields:
-                        invalid_fields.append(f'side{side}_dmin')
-                    error_msgs.append(f"Side {side_name}: dmin cannot be 0")
+                if z1 < 0:
+                    if f'side{side}_z1' not in invalid_fields: invalid_fields.append(f'side{side}_z1')
+                    error_msgs.append(f"Side {side_name}: z1 must be >= 0")
+                
+                if dmin <= 0:
+                    if f'side{side}_dmin' not in invalid_fields: invalid_fields.append(f'side{side}_dmin')
+                    error_msgs.append(f"Side {side_name}: dmin must be > 0")
                         
                 if dmin > (z2 - z1):
-                    if f'side{side}_dmin' not in invalid_fields:
-                        invalid_fields.append(f'side{side}_dmin')
+                    if f'side{side}_dmin' not in invalid_fields: invalid_fields.append(f'side{side}_dmin')
                     error_msgs.append(f"Side {side_name}: dmin must be <= (z2 - z1)")
                     
                 if side in (1, 3) and z2 > board_height:
-                    invalid_fields.append(f'side{side}_z2')
+                    if f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
                     error_msgs.append(f"Side {side_name}: z2 ({z2}) exceeds board height ({board_height})")
                 elif side in (2, 4) and z2 > board_base:
-                    invalid_fields.append(f'side{side}_z2')
+                    if f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
                     error_msgs.append(f"Side {side_name}: z2 ({z2}) exceeds board base ({board_base})")
+                    
+        # Corner validation rules
+        if self._side1_z2 == board_height and self._side4_z1 is not None and self._side4_z1 != 0:
+            if 'side4_z1' not in invalid_fields: invalid_fields.append('side4_z1')
+            error_msgs.append("Corner Rule (Top-Left): If Side 1 reaches the corner (z2=height), Side 4 must start at 0.")
+        if self._side4_z1 == 0 and self._side1_z2 is not None and self._side1_z2 != board_height:
+            if 'side1_z2' not in invalid_fields: invalid_fields.append('side1_z2')
+            error_msgs.append("Corner Rule (Top-Left): If Side 4 starts at 0, Side 1 must reach the corner (z2=height).")
+            
+        if self._side4_z2 == board_base and self._side3_z1 is not None and self._side3_z1 != 0:
+            if 'side3_z1' not in invalid_fields: invalid_fields.append('side3_z1')
+            error_msgs.append("Corner Rule (Bottom-Left): If Side 4 reaches the corner (z2=base), Side 3 must start at 0.")
+        if self._side3_z1 == 0 and self._side4_z2 is not None and self._side4_z2 != board_base:
+            if 'side4_z2' not in invalid_fields: invalid_fields.append('side4_z2')
+            error_msgs.append("Corner Rule (Bottom-Left): If Side 3 starts at 0, Side 4 must reach the corner (z2=base).")
+            
+        if self._side3_z2 == board_height and self._side2_z1 is not None and self._side2_z1 != 0:
+            if 'side2_z1' not in invalid_fields: invalid_fields.append('side2_z1')
+            error_msgs.append("Corner Rule (Bottom-Right): If Side 3 reaches the corner (z2=height), Side 2 must start at 0.")
+        if self._side2_z1 == 0 and self._side3_z2 is not None and self._side3_z2 != board_height:
+            if 'side3_z2' not in invalid_fields: invalid_fields.append('side3_z2')
+            error_msgs.append("Corner Rule (Bottom-Right): If Side 2 starts at 0, Side 3 must reach the corner (z2=height).")
+            
+        if self._side2_z2 == board_base and self._side1_z1 is not None and self._side1_z1 != 0:
+            if 'side1_z1' not in invalid_fields: invalid_fields.append('side1_z1')
+            error_msgs.append("Corner Rule (Top-Right): If Side 2 reaches the corner (z2=base), Side 1 must start at 0.")
+        if self._side1_z1 == 0 and self._side2_z2 is not None and self._side2_z2 != board_base:
+            if 'side2_z2' not in invalid_fields: invalid_fields.append('side2_z2')
+            error_msgs.append("Corner Rule (Top-Right): If Side 1 starts at 0, Side 2 must reach the corner (z2=base).")
                     
         if invalid_fields:
             self.validation_failed.emit(invalid_fields)

@@ -157,10 +157,10 @@ class Knot:
     def __init__(self, knot_no: int | str, x: int = 0,
                  pith_z: int = 0, pith_y: int = 0,
                  is_fake_pith: bool = False, comment: str = "",
-                 side1_z1: int = 0, side1_z2: int = 0, side1_dmin: int = 0,
-                 side2_z1: int = 0, side2_z2: int = 0, side2_dmin: int = 0,
-                 side3_z1: int = 0, side3_z2: int = 0, side3_dmin: int = 0,
-                 side4_z1: int = 0, side4_z2: int = 0, side4_dmin: int = 0):
+                 side1_z1: int | None = None, side1_z2: int | None = None, side1_dmin: int | None = None,
+                 side2_z1: int | None = None, side2_z2: int | None = None, side2_dmin: int | None = None,
+                 side3_z1: int | None = None, side3_z2: int | None = None, side3_dmin: int | None = None,
+                 side4_z1: int | None = None, side4_z2: int | None = None, side4_dmin: int | None = None):
         """
         Initialize a Knot.
 

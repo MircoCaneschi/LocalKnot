@@ -23,6 +23,12 @@ class VirtualBoardView(QWidget):
         self.setup_ui()
         self.bind_view_model()
         
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, 'scene') and hasattr(self, 'graphics_view'):
+            if self.scene.sceneRect().isValid():
+                self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        
     def setup_ui(self):
         # Main layout
         main_layout = QVBoxLayout(self)
@@ -132,20 +138,150 @@ class VirtualBoardView(QWidget):
                 prefix = side.split("_")[0]
                 for field, le in group.items():
                     prop_name = f"{prefix}_{field}"
-                    val = getattr(self.knots_vm, prop_name, 0)
+                    val = getattr(self.knots_vm, prop_name, None)
                     
                     # Block signals so setting text doesn't trigger textEdited -> _mark_dirty
                     le.blockSignals(True)
-                    le.setText(str(val) if val != 0 else "0")
+                    le.setText(str(val) if val is not None else "")
                     le.blockSignals(False)
 
         self.knots_vm.knot_data_changed.connect(update_ui_from_vm)
+        self.knots_vm.knot_data_changed.connect(self._redraw_board)
         self.knots_vm.validation_failed.connect(self._on_validation_failed)
         self.knots_vm.virtual_board_error.connect(self._on_virtual_board_error)
         self.knots_vm.hide_messages.connect(self.error_msg.hide)
         
         # Initial sync
         update_ui_from_vm()
+        self._redraw_board()
+
+    def _redraw_board(self):
+        from PySide6.QtGui import QPen, QBrush, QColor, QPolygonF
+        from PySide6.QtCore import QPointF, Qt
+        
+        self.scene.clear()
+        
+        if not self.knots_vm or not self.knots_vm._current_board or not self.knots_vm.board_repo:
+            return
+            
+        try:
+            board = self.knots_vm.board_repo.get_board_by_id(
+                self.knots_vm._current_board, 
+                self.knots_vm._current_project
+            )
+        except Exception:
+            return
+            
+        if not board:
+            return
+            
+        base = getattr(board, 'base', 0)
+        hight = getattr(board, 'height', 0)
+        
+        if base <= 0 or hight <= 0:
+            return
+            
+        margin = 5
+        # Lasciamo spazio verticale per il disegno longitudinale (es. 1.3x base invece di 2.5x)
+        self.scene.setSceneRect(-margin, -margin, hight + 2*margin, base * 1.3 + 2*margin)
+        
+        # Penna cosmetica per i bordi (rimane sottile a qualsiasi livello di zoom)
+        board_pen = QPen(Qt.black, 1.5)
+        board_pen.setCosmetic(True)
+        
+        # Disegno della sezione della tavola
+        board_rect = self.scene.addRect(0, 0, hight, base, board_pen, QBrush(QColor(240, 230, 210)))
+        
+        vm = self.knots_vm
+        pith_z = vm.pith_z
+        pith_y = vm.pith_y
+        
+        # Conversione coordinate: X = hight - z, Y = base - y
+        def map_x(z): return hight - z
+        def map_y(y): return base - y
+        
+        faces_data = [
+            (1, vm.side1_z1, vm.side1_z2),
+            (2, vm.side2_z1, vm.side2_z2),
+            (3, vm.side3_z1, vm.side3_z2),
+            (4, vm.side4_z1, vm.side4_z2),
+        ]
+        
+        has_knot_data = any(z2 is not None for _, z1, z2 in faces_data)
+        if not has_knot_data:
+            return
+            
+        points_on_faces = []
+        for face, z1, z2 in faces_data:
+            if z1 is not None and z2 is not None:
+                p1 = p2 = None
+                if face == 1:
+                    p1 = QPointF(map_x(z1), 0)
+                    p2 = QPointF(map_x(z2), 0)
+                elif face == 2:
+                    p1 = QPointF(hight, map_y(z1))
+                    p2 = QPointF(hight, map_y(z2))
+                elif face == 3:
+                    p1 = QPointF(z1, base)
+                    p2 = QPointF(z2, base)
+                elif face == 4:
+                    p1 = QPointF(0, z1)
+                    p2 = QPointF(0, z2)
+                
+                if p1 and p2:
+                    points_on_faces.append((face, p1, p2))
+                
+        if not points_on_faces:
+            return
+            
+        knot_brush = QBrush(QColor(139, 69, 19, 180)) # Colore legno scuro semitrasparente
+        knot_pen = QPen(QColor(101, 67, 33), 1.5)
+        knot_pen.setCosmetic(True) # Evita che i bordi del nodo diventino giganti con lo zoom
+        
+        has_pith = pith_z > 0 or pith_y > 0
+        
+        if has_pith:
+            pith_point = QPointF(map_x(pith_z), map_y(pith_y))
+            # Disegna il punto del midollo in modo che mantenga dimensione fissa su schermo
+            pith_pen = QPen(Qt.red, 1)
+            pith_pen.setCosmetic(True)
+            pith_item = self.scene.addEllipse(-3, -3, 6, 6, pith_pen, QBrush(Qt.red))
+            pith_item.setPos(pith_point)
+            pith_item.setFlag(pith_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
+            pith_item.setZValue(10) # Assicuriamoci che stia sempre sopra ai poligoni
+            
+            # Genera i poligoni che uniscono le facce al midollo
+            for face, p1, p2 in points_on_faces:
+                poly = QPolygonF([pith_point, p1, p2])
+                self.scene.addPolygon(poly, knot_pen, knot_brush)
+        else:
+            # Senza midollo: Uniamo i punti delle facce calcolando il loro ordinamento sul perimetro
+            def get_perimeter_param(pt):
+                x, y = pt.x(), pt.y()
+                if abs(y - 0) < 0.1: return x
+                elif abs(x - hight) < 0.1: return hight + y
+                elif abs(y - base) < 0.1: return hight + base + (hight - x)
+                elif abs(x - 0) < 0.1: return hight + base + hight + (base - y)
+                return 0
+
+            all_points = []
+            for _, p1, p2 in points_on_faces:
+                all_points.extend([p1, p2])
+                
+            all_points.sort(key=get_perimeter_param)
+            
+            unique_points = []
+            for pt in all_points:
+                if not unique_points or (abs(unique_points[-1].x() - pt.x()) > 0.1 or abs(unique_points[-1].y() - pt.y()) > 0.1):
+                    unique_points.append(pt)
+                    
+            if len(unique_points) >= 3:
+                poly = QPolygonF(unique_points)
+                self.scene.addPolygon(poly, knot_pen, knot_brush)
+                
+        # Forza il ridimensionamento della vista per farla fittare nello spazio a disposizione
+        if self.scene.sceneRect().isValid():
+            self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def _on_virtual_board_error(self, msg: str):
         """Show error message and flash it."""
