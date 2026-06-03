@@ -467,6 +467,20 @@ class KnotsViewModel(QObject):
         board_base = board.base if board else float('inf')
         board_length = board.length if board else float('inf')
 
+        # Check pith is inside the board
+        if self._pith_z is not None and self._pith_z >= board_height:
+            self.knot_error.emit(
+                f"Pith Z ({self._pith_z}) must be less than board height ({board_height})."
+            )
+            self.validation_failed.emit(["pith_z"])
+            return
+        if self._pith_y is not None and self._pith_y >= board_base:
+            self.knot_error.emit(
+                f"Pith Y ({self._pith_y}) must be less than board base ({board_base})."
+            )
+            self.validation_failed.emit(["pith_y"])
+            return
+
         # Check X <= length for all knots
         if self._x > board_length:
             self.knot_error.emit(f"Position X ({self._x}) cannot exceed board length ({board_length}).")

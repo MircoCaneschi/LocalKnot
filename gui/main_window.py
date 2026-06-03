@@ -136,6 +136,10 @@ class MainWindow(QMainWindow):
         self.virtual_board_view = VirtualBoardView(self.virtual_board_vm, self.knots_vm)
         self.main_layout.addWidget(self.virtual_board_view)
 
+        # Redraw the virtual board when board dimensions change or are saved
+        self.boards_vm.board_saved.connect(self.virtual_board_view._redraw_board)
+        self.boards_vm.board_data_changed.connect(self.virtual_board_view._redraw_board)
+
         # Trigger initial data load now that UI is fully initialized
         self.knots_vm.handle_project_changed(self.projects_vm.current_project)
         self.boards_vm.handle_project_changed(self.projects_vm.current_project)

@@ -242,15 +242,66 @@ class BoardsViewModel(QObject):
                 self.board_error.emit("Invalid measurements! Height, base, and length must be numbers >= 0.")
                 return
 
-            # Check if any existing knot has an X greater than the new length
+            # When modifying an existing board, verify no knot violates the new dimensions
             if not self._board_editable and self.knot_repo:
                 knots = self.knot_repo.get_all_knots(board_text, self._current_project)
-                invalid_knots = [k for k in knots if k.x > self._length]
-                if invalid_knots:
-                    knot_nos = ", ".join([str(k.knot_no) for k in invalid_knots])
-                    self.board_error.emit(f"Cannot save: knots [{knot_nos}] have an X position greater than the new length ({self._length}).")
-                    self.validation_failed.emit(["Length"])
+                violations = []
+                violated_fields = set()
+
+                for k in knots:
+                    kn = str(k.knot_no)
+
+                    # X vs. length
+                    if k.x is not None and k.x > self._length:
+                        violations.append(f"Knot {kn}: X={k.x} exceeds new length ({self._length}).")
+                        violated_fields.add("Length")
+
+                    # pith_z vs. height (must be strictly less than height)
+                    if k.pith_z is not None and k.pith_z >= self._height:
+                        violations.append(f"Knot {kn}: pith_z={k.pith_z} must be less than new height ({self._height}).")
+                        violated_fields.add("Height")
+
+                    # pith_y vs. base (must be strictly less than base)
+                    if k.pith_y is not None and k.pith_y >= self._base:
+                        violations.append(f"Knot {kn}: pith_y={k.pith_y} must be less than new base ({self._base}).")
+                        violated_fields.add("Base")
+
+                    # Sides 1 and 3: z coordinates are along the height axis
+                    for side_no, z1, z2 in [
+                        (1, k.side1_z1, k.side1_z2),
+                        (3, k.side3_z1, k.side3_z2),
+                    ]:
+                        if z1 is not None and z1 > self._height:
+                            violations.append(f"Knot {kn}: side{side_no}_z1={z1} exceeds new height ({self._height}).")
+                            violated_fields.add("Height")
+                        if z2 is not None and z2 > self._height:
+                            violations.append(f"Knot {kn}: side{side_no}_z2={z2} exceeds new height ({self._height}).")
+                            violated_fields.add("Height")
+
+                    # Sides 2 and 4: z coordinates are along the base axis
+                    for side_no, z1, z2 in [
+                        (2, k.side2_z1, k.side2_z2),
+                        (4, k.side4_z1, k.side4_z2),
+                    ]:
+                        if z1 is not None and z1 > self._base:
+                            violations.append(f"Knot {kn}: side{side_no}_z1={z1} exceeds new base ({self._base}).")
+                            violated_fields.add("Base")
+                        if z2 is not None and z2 > self._base:
+                            violations.append(f"Knot {kn}: side{side_no}_z2={z2} exceeds new base ({self._base}).")
+                            violated_fields.add("Base")
+
+                if violations:
+                    # Cap the message to avoid flooding the UI
+                    msg_lines = violations[:5]
+                    if len(violations) > 5:
+                        msg_lines.append(f"... and {len(violations) - 5} more violation(s).")
+                    self.board_error.emit(
+                        "Cannot save: one or more knots would exceed the new board dimensions.\n"
+                        + "\n".join(msg_lines)
+                    )
+                    self.validation_failed.emit(list(violated_fields))
                     return
+
 
             if self._board_editable:
                 # Creating a new board

@@ -150,6 +150,11 @@ class VirtualBoardView(QWidget):
         self.knots_vm.validation_failed.connect(self._on_validation_failed)
         self.knots_vm.virtual_board_error.connect(self._on_virtual_board_error)
         self.knots_vm.hide_messages.connect(self.error_msg.hide)
+
+        # Redraw whenever the user edits a side field directly in the virtual board
+        for group in self.inputs.values():
+            for le in group.values():
+                le.textEdited.connect(self._redraw_board)
         
         # Initial sync
         update_ui_from_vm()
@@ -234,50 +239,57 @@ class VirtualBoardView(QWidget):
         if not points_on_faces:
             return
             
-        knot_brush = QBrush(QColor(139, 69, 19, 180)) # Colore legno scuro semitrasparente
+        knot_brush = QBrush(QColor(139, 69, 19, 180))
         knot_pen = QPen(QColor(101, 67, 33), 1.5)
-        knot_pen.setCosmetic(True) # Evita che i bordi del nodo diventino giganti con lo zoom
-        
+        knot_pen.setCosmetic(True)
+
+        # Sort all border points clockwise around the board perimeter.
+        # This is used both with and without a pith so the shape is always
+        # a clean outline with no internal dividing lines.
+        def get_perimeter_param(pt):
+            x, y = pt.x(), pt.y()
+            if abs(y - 0) < 0.1:       return x
+            elif abs(x - hight) < 0.1: return hight + y
+            elif abs(y - base) < 0.1:  return hight + base + (hight - x)
+            elif abs(x - 0) < 0.1:     return hight + base + hight + (base - y)
+            return 0
+
+        all_border_pts = []
+        for _, p1, p2 in points_on_faces:
+            all_border_pts.extend([p1, p2])
+        all_border_pts.sort(key=get_perimeter_param)
+
+        unique_border_pts = []
+        for pt in all_border_pts:
+            if not unique_border_pts or (
+                abs(unique_border_pts[-1].x() - pt.x()) > 0.1
+                or abs(unique_border_pts[-1].y() - pt.y()) > 0.1
+            ):
+                unique_border_pts.append(pt)
+
         has_pith = (pith_z is not None and pith_z > 0) or (pith_y is not None and pith_y > 0)
-        
+
         if has_pith and pith_z is not None and pith_y is not None:
             pith_point = QPointF(map_x(pith_z), map_y(pith_y))
-            # Disegna il punto del midollo in modo che mantenga dimensione fissa su schermo
+
+            # Single polygon: pith → border points in perimeter order.
+            # Never draws internal lines, even at corners.
+            if len(unique_border_pts) >= 2:
+                poly = QPolygonF([pith_point] + unique_border_pts)
+                self.scene.addPolygon(poly, knot_pen, knot_brush)
+
+            # Draw the pith dot on top
             pith_pen = QPen(Qt.red, 1)
             pith_pen.setCosmetic(True)
             pith_item = self.scene.addEllipse(-3, -3, 6, 6, pith_pen, QBrush(Qt.red))
             pith_item.setPos(pith_point)
             pith_item.setFlag(pith_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
-            pith_item.setZValue(10) # Assicuriamoci che stia sempre sopra ai poligoni
-            
-            # Genera i poligoni che uniscono le facce al midollo
-            for face, p1, p2 in points_on_faces:
-                poly = QPolygonF([pith_point, p1, p2])
-                self.scene.addPolygon(poly, knot_pen, knot_brush)
+            pith_item.setZValue(10)
         else:
-            # Senza midollo: Uniamo i punti delle facce calcolando il loro ordinamento sul perimetro
-            def get_perimeter_param(pt):
-                x, y = pt.x(), pt.y()
-                if abs(y - 0) < 0.1: return x
-                elif abs(x - hight) < 0.1: return hight + y
-                elif abs(y - base) < 0.1: return hight + base + (hight - x)
-                elif abs(x - 0) < 0.1: return hight + base + hight + (base - y)
-                return 0
-
-            all_points = []
-            for _, p1, p2 in points_on_faces:
-                all_points.extend([p1, p2])
-                
-            all_points.sort(key=get_perimeter_param)
-            
-            unique_points = []
-            for pt in all_points:
-                if not unique_points or (abs(unique_points[-1].x() - pt.x()) > 0.1 or abs(unique_points[-1].y() - pt.y()) > 0.1):
-                    unique_points.append(pt)
-                    
-            if len(unique_points) >= 3:
-                poly = QPolygonF(unique_points)
+            if len(unique_border_pts) >= 3:
+                poly = QPolygonF(unique_border_pts)
                 self.scene.addPolygon(poly, knot_pen, knot_brush)
+
                 
         # Forza il ridimensionamento della vista per farla fittare nello spazio a disposizione
         if self.scene.sceneRect().isValid():

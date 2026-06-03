@@ -243,16 +243,20 @@ class BoardsView:
         self.board_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_board_no', text))
         self.hidden_board_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_board_no', text))
 
+        def _parse_float(text: str):
+            """Accept both '.' and ',' as decimal separator."""
+            return text.replace(',', '.') if text else 0
+
         # Line edits sync with ViewModel
-        self.height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', self.height_line.text() or 0))
-        self.base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', self.base_line.text() or 0))
-        self.length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', self.length_line.text() or 0))
+        self.height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', _parse_float(self.height_line.text())))
+        self.base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', _parse_float(self.base_line.text())))
+        self.length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', _parse_float(self.length_line.text())))
         self.testpos_line.textChanged.connect(lambda: setattr(self.view_model, 'test_position', self.testpos_line.text()))
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
         
-        self.hidden_height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', self.hidden_height_line.text() or 0))
-        self.hidden_base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', self.hidden_base_line.text() or 0))
-        self.hidden_length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', self.hidden_length_line.text() or 0))
+        self.hidden_height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', _parse_float(self.hidden_height_line.text())))
+        self.hidden_base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', _parse_float(self.hidden_base_line.text())))
+        self.hidden_length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', _parse_float(self.hidden_length_line.text())))
 
         # Sync main and hidden line edits directly
         self.height_line.textEdited.connect(self.hidden_height_line.setText)
