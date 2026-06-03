@@ -299,6 +299,19 @@ class ProjectsView:
         - Widget signals → ViewModel Slots (for user actions)
         - ViewModel Signals → View methods (for state changes)
         """
+        # Hide messages on interaction (Connect FIRST so it runs before other slots)
+        for combo in [self.combo_box_projects, self.hidden_combo_box_projects, 
+                      self.combo_box_species, self.hidden_combo_box_species]:
+            combo.activated.connect(self._hide_messages)
+            if combo.lineEdit():
+                combo.lineEdit().textEdited.connect(self._hide_messages)
+                
+        for btn in [self.new_btn, self.change_name_btn, self.delete_btn, 
+                    self.add_species_btn, self.modify_species_btn, self.delete_species_btn,
+                    self.right_shift_btn, self.left_shift_btn,
+                    self.hidden_right_shift_btn, self.hidden_left_shift_btn]:
+            btn.clicked.connect(self._hide_messages)
+
         # Button clicks → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_project)
         self.save_btn.clicked.connect(self.view_model.handle_save_project)
@@ -400,6 +413,11 @@ class ProjectsView:
         self._update_shift_buttons_state()
 
     # ==================== SIGNAL HANDLERS (from ViewModel) ====================
+
+    def _hide_messages(self, *args):
+        """Hide all messages in this view."""
+        self.project_msg.hide()
+        self.species_msg.hide()
 
     def _on_projects_changed(self, projects: list):
         """Intelligently updates main combo box without clearing if possible."""

@@ -238,9 +238,9 @@ class VirtualBoardView(QWidget):
         knot_pen = QPen(QColor(101, 67, 33), 1.5)
         knot_pen.setCosmetic(True) # Evita che i bordi del nodo diventino giganti con lo zoom
         
-        has_pith = pith_z > 0 or pith_y > 0
+        has_pith = (pith_z is not None and pith_z > 0) or (pith_y is not None and pith_y > 0)
         
-        if has_pith:
+        if has_pith and pith_z is not None and pith_y is not None:
             pith_point = QPointF(map_x(pith_z), map_y(pith_y))
             # Disegna il punto del midollo in modo che mantenga dimensione fissa su schermo
             pith_pen = QPen(Qt.red, 1)

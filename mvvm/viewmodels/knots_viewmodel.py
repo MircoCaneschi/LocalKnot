@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, Signal, Slot, Property
 from typing import List
 from core.repository import KnotRepository, BoardRepository
 from mvvm.models import Knot
+from core.exceptions import LocalKnotError
 
 
 class KnotsViewModel(QObject):
@@ -56,8 +57,8 @@ class KnotsViewModel(QObject):
         self._knots = []
         self._current_knot_no = ""
         self._x = 0
-        self._pith_z = 0
-        self._pith_y = 0
+        self._pith_z = None
+        self._pith_y = None
         self._is_fake_pith = False
         self._comment = ""
         self._side1_z1 = None
@@ -117,32 +118,32 @@ class KnotsViewModel(QObject):
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def pith_z(self) -> int:
+    @Property(object)
+    def pith_z(self):
         """Get the Pith Z coordinate."""
         return self._pith_z
 
     @pith_z.setter
-    def pith_z(self, value: int):
+    def pith_z(self, value):
         """Set the Pith Z coordinate."""
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._pith_z != val:
                 self._pith_z = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
-    def pith_y(self) -> int:
+    @Property(object)
+    def pith_y(self):
         """Get the Pith Y coordinate."""
         return self._pith_y
 
     @pith_y.setter
-    def pith_y(self, value: int):
+    def pith_y(self, value):
         """Set the Pith Y coordinate."""
         try:
-            val = int(value)
+            val = None if value == "" or value is None else int(value)
             if self._pith_y != val:
                 self._pith_y = val
                 self._mark_dirty()
@@ -167,9 +168,6 @@ class KnotsViewModel(QObject):
             self._is_fake_pith = value
             self.knot_data_changed.emit()
             self._mark_dirty()
-            # Save automatically on toggle if it's an existing knot
-            if not self._knot_editable and self._current_knot_no:
-                self.handle_save_knot()
 
     @Property(str)
     def comment(self) -> str:
@@ -381,6 +379,8 @@ class KnotsViewModel(QObject):
                 self.current_knot_no = str(self._knots[0].knot_no)
             else:
                 self.handle_new_knot()
+        except LocalKnotError as e:
+            self.knot_error.emit(str(e))
         except Exception as e:
             self.knot_error.emit(f"Failed to load knots: {str(e)}")
 
@@ -393,8 +393,8 @@ class KnotsViewModel(QObject):
         
         self.current_knot_no = ""
         self._x = 0
-        self._pith_z = 0
-        self._pith_y = 0
+        self._pith_z = None
+        self._pith_y = None
         self._is_fake_pith = False
         self._comment = ""
         self._side1_z1 = None
@@ -432,14 +432,29 @@ class KnotsViewModel(QObject):
             return
 
         # Check > 0 condition for new knots
+        invalid_fields_local = []
+        error_messages_local = []
+        
         if self._knot_editable:
-            invalid_fields = []
-            if self._x <= 0: invalid_fields.append("X")
-            
-            if invalid_fields:
-                self.knot_error.emit(f"Field X must be greater than 0.")
-                self.validation_failed.emit(invalid_fields)
-                return
+            if self._x <= 0: 
+                invalid_fields_local.append("X")
+                error_messages_local.append("Field X must be greater than 0.")
+                
+        if self._is_fake_pith:
+            if self._pith_z == 0 or self._pith_z is None: invalid_fields_local.append("pith_z")
+            if self._pith_y == 0 or self._pith_y is None: invalid_fields_local.append("pith_y")
+            if "pith_z" in invalid_fields_local or "pith_y" in invalid_fields_local:
+                error_messages_local.append("Pith Z and Pith Y must be compiled and != 0 when fake pith is selected.")
+
+        if (self._pith_z is None and self._pith_y is not None) or (self._pith_z is not None and self._pith_y is None):
+            if self._pith_z is None and "pith_z" not in invalid_fields_local: invalid_fields_local.append("pith_z")
+            if self._pith_y is None and "pith_y" not in invalid_fields_local: invalid_fields_local.append("pith_y")
+            error_messages_local.append("Both Pith Z and Pith Y must be compiled if one is provided.")
+
+        if invalid_fields_local:
+            self.knot_error.emit("\n".join(error_messages_local))
+            self.validation_failed.emit(invalid_fields_local)
+            return
 
         board = None
         if self.board_repo:
@@ -575,6 +590,8 @@ class KnotsViewModel(QObject):
                             break
                     self.knot_saved.emit(f"Knot {self._current_knot_no} updated!")
                     self.save_enabled_changed.emit(False)
+        except LocalKnotError as e:
+            self.knot_error.emit(str(e))
         except Exception as e:
             self.knot_error.emit(f"Failed to save: {str(e)}")
 
@@ -600,6 +617,8 @@ class KnotsViewModel(QObject):
                     self.current_knot_no = str(self._knots[0].knot_no)
                 else:
                     self.handle_new_knot()
+        except LocalKnotError as e:
+            self.knot_error.emit(str(e))
         except Exception as e:
             self.knot_error.emit(f"Failed to delete: {str(e)}")
 
@@ -637,6 +656,8 @@ class KnotsViewModel(QObject):
                 self.knot_data_changed.emit()
                 self.knot_selected.emit(knot_no)
                 self.save_enabled_changed.emit(False)
+        except LocalKnotError as e:
+            self.knot_error.emit(str(e))
         except Exception as e:
             self.knot_error.emit(f"Failed to load: {str(e)}")
 

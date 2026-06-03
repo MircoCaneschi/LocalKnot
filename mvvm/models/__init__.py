@@ -155,7 +155,7 @@ class Knot:
     """
 
     def __init__(self, knot_no: int | str, x: int = 0,
-                 pith_z: int = 0, pith_y: int = 0,
+                 pith_z: int | None = None, pith_y: int | None = None,
                  is_fake_pith: bool = False, comment: str = "",
                  side1_z1: int | None = None, side1_z2: int | None = None, side1_dmin: int | None = None,
                  side2_z1: int | None = None, side2_z2: int | None = None, side2_dmin: int | None = None,
@@ -201,6 +201,6 @@ class Knot:
             bool: True if valid, False otherwise
         """
         return isinstance(self.x, int) and \
-               isinstance(self.pith_z, int) and \
-               isinstance(self.pith_y, int)
+               (self.pith_z is None or isinstance(self.pith_z, int)) and \
+               (self.pith_y is None or isinstance(self.pith_y, int))
 

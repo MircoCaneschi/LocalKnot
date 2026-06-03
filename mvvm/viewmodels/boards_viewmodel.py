@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, Signal, Slot, Property
 from typing import List
 from core.repository import BoardRepository, KnotRepository
 from mvvm.models import Board
+from core.exceptions import LocalKnotError
 
 
 class BoardsViewModel(QObject):
@@ -173,6 +174,8 @@ class BoardsViewModel(QObject):
                 self.current_board_no = str(self._boards[0].board_no)
             else:
                 self.handle_new_board()
+        except LocalKnotError as e:
+            self.board_error.emit(str(e))
         except Exception as e:
             self.board_error.emit(f"Failed to load boards: {str(e)}")
 
@@ -270,6 +273,8 @@ class BoardsViewModel(QObject):
                     self.board_saved.emit(f"Board {self._current_board_no} updated!")
                     self.save_enabled_changed.emit(False)
                     
+        except LocalKnotError as e:
+            self.board_error.emit(str(e))
         except Exception as e:
             self.board_error.emit(f"Failed to save: {str(e)}")
 
@@ -295,6 +300,8 @@ class BoardsViewModel(QObject):
                     self.current_board_no = str(self._boards[0].board_no)
                 else:
                     self.handle_new_board()
+        except LocalKnotError as e:
+            self.board_error.emit(str(e))
         except Exception as e:
             self.board_error.emit(f"Failed to delete: {str(e)}")
 
@@ -320,6 +327,8 @@ class BoardsViewModel(QObject):
                 self.board_data_changed.emit()
                 self.board_selected.emit(board_no)
                 self.save_enabled_changed.emit(False)
+        except LocalKnotError as e:
+            self.board_error.emit(str(e))
         except Exception as e:
             self.board_error.emit(f"Failed to load: {str(e)}")
 

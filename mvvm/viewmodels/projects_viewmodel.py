@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, Signal, Slot, Property
 from typing import List
 from core.repository import ProjectRepository
 from mvvm.models import Project
+from core.exceptions import LocalKnotError
 
 
 class ProjectsViewModel(QObject):
@@ -313,6 +314,8 @@ class ProjectsViewModel(QObject):
             self._current_project = "" # Force setter to recognize change
             self.current_project = project.name
 
+        except LocalKnotError as e:
+            self.project_error.emit(str(e))
         except Exception as e:
             self.project_error.emit(f"Failed to save project: {str(e)}")
 
@@ -409,6 +412,8 @@ class ProjectsViewModel(QObject):
             self.species_editable_changed.emit(False)
             self._update_species_actions_state()
 
+        except LocalKnotError as e:
+            self.species_error.emit(str(e))
         except Exception as e:
             self.species_error.emit(f"Error saving species: {str(e)}")
 
@@ -447,6 +452,8 @@ class ProjectsViewModel(QObject):
                 self.species_editable_changed.emit(False)
             else:
                 self.species_error.emit("Failed to update species in database.")
+        except LocalKnotError as e:
+            self.species_error.emit(str(e))
         except Exception as e:
             self.species_error.emit(f"Error updating species: {str(e)}")
 
@@ -478,6 +485,8 @@ class ProjectsViewModel(QObject):
                     self.current_species = ""
                 
                 self.project_saved.emit(f"Project {project_to_delete} deleted.")
+        except LocalKnotError as e:
+            self.project_error.emit(str(e))
         except Exception as e:
             self.project_error.emit(f"Failed to delete project: {str(e)}")
 
@@ -510,6 +519,8 @@ class ProjectsViewModel(QObject):
                 
                 self.species_added.emit(f"Species {species_to_delete} deleted.")
                 self._update_species_actions_state()
+        except LocalKnotError as e:
+            self.species_error.emit(str(e))
         except Exception as e:
             self.species_error.emit(f"Failed to delete species: {str(e)}")
 
@@ -604,6 +615,9 @@ class ProjectsViewModel(QObject):
                 self._current_species = self._projects[0].species
                 self.current_species_changed.emit(self._current_species)
                 
+        except LocalKnotError as e:
+            print(f"DEBUG: Failed to load projects: {str(e)}")
+            self.project_error.emit(str(e))
         except Exception as e:
             print(f"DEBUG: Failed to load projects: {str(e)}")
             self.project_error.emit(f"Failed to load projects: {str(e)}")
@@ -613,6 +627,8 @@ class ProjectsViewModel(QObject):
         try:
             self._species = self.repo.get_all_species()
             self.species_changed.emit(self._species)
+        except LocalKnotError as e:
+            self.species_error.emit(str(e))
         except Exception as e:
             self.species_error.emit(f"Failed to load species: {str(e)}")
 
@@ -628,5 +644,7 @@ class ProjectsViewModel(QObject):
                     self._species.sort()
                     self.species_changed.emit(self._species)
                     self.species_added.emit(f"Species {species_name} added!")
+        except LocalKnotError as e:
+            self.species_error.emit(str(e))
         except Exception as e:
             self.species_error.emit(f"Failed to add species: {str(e)}")

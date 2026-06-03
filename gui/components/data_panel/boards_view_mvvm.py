@@ -216,6 +216,20 @@ class BoardsView:
 
     def _bind_to_view_model(self):
         """Establish all connections between View and ViewModel."""
+        # Hide messages on interaction (Connect FIRST so it runs before other slots)
+        for combo in [self.board_no_combo, self.hidden_board_no_combo]:
+            combo.activated.connect(self._hide_messages)
+            if combo.lineEdit():
+                combo.lineEdit().textEdited.connect(self._hide_messages)
+        
+        for le in [self.height_line, self.base_line, self.length_line, self.testpos_line, self.comment_line,
+                   self.hidden_height_line, self.hidden_base_line, self.hidden_length_line]:
+            le.textEdited.connect(self._hide_messages)
+
+        for btn in [self.new_btn, self.delete_btn, self.right_shift_btn, self.left_shift_btn,
+                    self.hidden_right_shift_btn, self.hidden_left_shift_btn]:
+            btn.clicked.connect(self._hide_messages)
+
         # Widget signals → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_board)
         self.save_btn.clicked.connect(self.view_model.handle_save_board)
@@ -262,6 +276,10 @@ class BoardsView:
         self.view_model.validation_failed.connect(self._on_validation_failed)
 
     # ==================== SIGNAL HANDLERS ====================
+
+    def _hide_messages(self, *args):
+        """Hide all messages in this view."""
+        self.board_msg.hide()
 
     def _on_boards_changed(self, boards: list):
         """Update board combo box when boards list changes."""

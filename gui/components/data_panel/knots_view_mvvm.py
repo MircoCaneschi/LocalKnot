@@ -49,6 +49,10 @@ class KnotsView:
         # Label references for animation
         self.x_label = None
         self.hidden_x_label = None
+        self.pith_z_label = None
+        self.pith_y_label = None
+        self.hidden_pith_z_label = None
+        self.hidden_pith_y_label = None
         self._animations = []
 
         # Setup UI
@@ -125,15 +129,19 @@ class KnotsView:
         self.fake_pith.setChecked(False)
 
         self.x_label = QLabel("X")
+        self.pith_z_label = QLabel("Pith Z")
+        self.pith_y_label = QLabel("Pith Y")
         data_layout.addRow(self.x_label, self.x_line)
-        data_layout.addRow("Pith Z", self.pith_z_line)
-        data_layout.addRow("Pith Y", self.pith_y_line)
+        data_layout.addRow(self.pith_z_label, self.pith_z_line)
+        data_layout.addRow(self.pith_y_label, self.pith_y_line)
         data_layout.addRow("Comment", self.comment_line)
         data_layout.addRow("Fake pith", self.fake_pith)
 
         # Message label
         self.knot_msg = QLabel()
-        self.knot_msg.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        sp = QSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        sp.setRetainSizeWhenHidden(True)
+        self.knot_msg.setSizePolicy(sp)
         self.knot_msg.hide()
 
         # grid disposition
@@ -190,9 +198,11 @@ class KnotsView:
         pith_y.setContentsMargins(5, 0, 0, 0)
         
         self.hidden_x_label = QLabel("X")
+        self.hidden_pith_z_label = QLabel("Pith Z")
+        self.hidden_pith_y_label = QLabel("Pith Y")
         x.addRow(self.hidden_x_label, self.hidden_x_line)
-        pith_z.addRow("Pith Z", self.hidden_pith_z_line)
-        pith_y.addRow("Pith Y", self.hidden_pith_y_line)
+        pith_z.addRow(self.hidden_pith_z_label, self.hidden_pith_z_line)
+        pith_y.addRow(self.hidden_pith_y_label, self.hidden_pith_y_line)
         hidden_data_layout.addLayout(x)
         hidden_data_layout.addLayout(pith_z)
         hidden_data_layout.addLayout(pith_y)
@@ -210,6 +220,23 @@ class KnotsView:
 
     def _bind_to_view_model(self):
         """Establish all connections between View and ViewModel."""
+        # Hide messages on interaction (Connect FIRST so it runs before other slots)
+        for combo in [self.knot_no_combo, self.hidden_knot_no_combo]:
+            combo.activated.connect(self._hide_messages)
+            if combo.lineEdit():
+                combo.lineEdit().textEdited.connect(self._hide_messages)
+        
+        for le in [self.x_line, self.pith_z_line, self.pith_y_line, self.comment_line,
+                   self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line]:
+            le.textEdited.connect(self._hide_messages)
+
+        for cb in [self.fake_pith, self.hidden_fake_pith]:
+            cb.clicked.connect(self._hide_messages)
+
+        for btn in [self.new_btn, self.delete_btn, self.right_shift_btn, self.left_shift_btn,
+                    self.hidden_right_shift_btn, self.hidden_left_shift_btn]:
+            btn.clicked.connect(self._hide_messages)
+
         # Widget signals → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_knot)
         self.save_btn.clicked.connect(self.view_model.handle_save_knot)
@@ -224,15 +251,15 @@ class KnotsView:
 
         # Line edits sync with ViewModel
         self.x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.x_line.text() or 0))
-        self.pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.pith_z_line.text() or 0))
-        self.pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.pith_y_line.text() or 0))
+        self.pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.pith_z_line.text()))
+        self.pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.pith_y_line.text()))
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
         self.fake_pith.stateChanged.connect(lambda: setattr(self.view_model, 'is_fake_pith', self.fake_pith.isChecked()))
 
         # Also sync hidden components with ViewModel
         self.hidden_x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.hidden_x_line.text() or 0))
-        self.hidden_pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.hidden_pith_z_line.text() or 0))
-        self.hidden_pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.hidden_pith_y_line.text() or 0))
+        self.hidden_pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.hidden_pith_z_line.text()))
+        self.hidden_pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.hidden_pith_y_line.text()))
         self.hidden_fake_pith.stateChanged.connect(lambda: setattr(self.view_model, 'is_fake_pith', self.hidden_fake_pith.isChecked()))
 
         # Sync main and hidden components directly
@@ -261,6 +288,10 @@ class KnotsView:
 
     # ==================== SIGNAL HANDLERS ====================
 
+    def _hide_messages(self, *args):
+        """Hide all messages in this view."""
+        self.knot_msg.hide()
+
     def _on_knots_changed(self, knots: list):
         """Update knot combo box when knots list changes."""
         self.knot_no_combo.blockSignals(True)
@@ -288,14 +319,14 @@ class KnotsView:
         self.hidden_fake_pith.blockSignals(True)
 
         self.x_line.setText(str(self.view_model.x))
-        self.pith_z_line.setText(str(self.view_model.pith_z))
-        self.pith_y_line.setText(str(self.view_model.pith_y))
+        self.pith_z_line.setText("" if self.view_model.pith_z is None else str(self.view_model.pith_z))
+        self.pith_y_line.setText("" if self.view_model.pith_y is None else str(self.view_model.pith_y))
         self.comment_line.setText(self.view_model.comment)
         self.fake_pith.setChecked(self.view_model.is_fake_pith)
         
         self.hidden_x_line.setText(str(self.view_model.x))
-        self.hidden_pith_z_line.setText(str(self.view_model.pith_z))
-        self.hidden_pith_y_line.setText(str(self.view_model.pith_y))
+        self.hidden_pith_z_line.setText("" if self.view_model.pith_z is None else str(self.view_model.pith_z))
+        self.hidden_pith_y_line.setText("" if self.view_model.pith_y is None else str(self.view_model.pith_y))
         self.hidden_fake_pith.setChecked(self.view_model.is_fake_pith)
         
         for le in line_edits:
@@ -359,6 +390,14 @@ class KnotsView:
         if "X" in invalid_fields:
             _flash_label(self.x_label)
             _flash_label(self.hidden_x_label)
+            _flash_label(self.knot_msg)
+        if "pith_z" in invalid_fields:
+            _flash_label(self.pith_z_label)
+            _flash_label(self.hidden_pith_z_label)
+            _flash_label(self.knot_msg)
+        if "pith_y" in invalid_fields:
+            _flash_label(self.pith_y_label)
+            _flash_label(self.hidden_pith_y_label)
             _flash_label(self.knot_msg)
 
     def set_knot_editable(self, state: bool):
