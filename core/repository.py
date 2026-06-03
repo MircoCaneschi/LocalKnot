@@ -444,3 +444,16 @@ class KnotRepository:
                 return cursor.fetchone() is not None
         except sqlite3.Error:
             return False
+
+    @handle_db_errors
+    def rename_knot_id(self, old_id: str, new_id: str, board_id: str, project_id: str) -> bool:
+        """Rename a knot's id_nodo (used for renumbering after deletion)."""
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE knot SET id_nodo = ? WHERE id_nodo = ? AND id_board = ? AND id_project = ?",
+                (new_id, old_id, board_id, project_id)
+            )
+            conn.commit()
+        return True
+

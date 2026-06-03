@@ -223,8 +223,6 @@ class KnotsView:
         # Hide messages on interaction (Connect FIRST so it runs before other slots)
         for combo in [self.knot_no_combo, self.hidden_knot_no_combo]:
             combo.activated.connect(self._hide_messages)
-            if combo.lineEdit():
-                combo.lineEdit().textEdited.connect(self._hide_messages)
         
         for le in [self.x_line, self.pith_z_line, self.pith_y_line, self.comment_line,
                    self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line]:
@@ -401,23 +399,21 @@ class KnotsView:
             _flash_label(self.knot_msg)
 
     def set_knot_editable(self, state: bool):
-        """Enable or disable editing for knot combobox and buttons."""
+        """Enable or disable the save/delete/shift buttons based on editing state.
+        The knot combo is always non-editable (IDs are auto-assigned)."""
         self.knot_no_combo.blockSignals(True)
         self.hidden_knot_no_combo.blockSignals(True)
-        
-        self.knot_no_combo.setEditable(state)
-        self.hidden_knot_no_combo.setEditable(state)
-        
+
         if not state:
             self.knot_no_combo.setCurrentText(self.view_model.current_knot_no)
             self.hidden_knot_no_combo.setCurrentText(self.view_model.current_knot_no)
-            
+
         self.knot_no_combo.blockSignals(False)
         self.hidden_knot_no_combo.blockSignals(False)
-        
+
         self.save_btn.setEnabled(state)
         self.delete_btn.setEnabled(not state)
-        
+
         self.left_shift_btn.setEnabled(not state)
         self.right_shift_btn.setEnabled(not state)
         self.hidden_left_shift_btn.setEnabled(not state)

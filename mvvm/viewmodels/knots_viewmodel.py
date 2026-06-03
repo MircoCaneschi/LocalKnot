@@ -386,12 +386,19 @@ class KnotsViewModel(QObject):
 
     @Slot()
     def handle_new_knot(self):
-        """Prepare UI for new knot creation."""
+        """Prepare UI for new knot creation with auto-assigned ID."""
         self.hide_messages.emit()
         self._knot_editable = True
         self.knot_editable_changed.emit(True)
-        
-        self.current_knot_no = ""
+
+        # Auto-assign next sequential ID
+        if self._knots:
+            next_id = max(int(k.knot_no) for k in self._knots) + 1
+        else:
+            next_id = 1
+        self._current_knot_no = str(next_id)
+        self.current_knot_changed.emit(self._current_knot_no)
+
         self._x = 0
         self._pith_z = None
         self._pith_y = None
@@ -415,21 +422,12 @@ class KnotsViewModel(QObject):
     def handle_save_knot(self):
         """Validate and save knot data."""
         self.hide_messages.emit()
-        
+
         if not self._current_project or not self._current_board:
             self.knot_error.emit("No project or board selected!")
             return
-            
-        if not self._current_knot_no:
-            self.knot_error.emit("Knot number cannot be empty!")
-            return
-            
+
         knot_text = str(self._current_knot_no).strip()
-        
-        # Check duplicate if creating
-        if self._knot_editable and any(str(k.knot_no) == knot_text for k in self._knots):
-            self.knot_error.emit("Knot already exists!")
-            return
 
         # Check > 0 condition for new knots
         invalid_fields_local = []
@@ -611,7 +609,7 @@ class KnotsViewModel(QObject):
 
     @Slot()
     def handle_delete_knot(self):
-        """Delete the currently selected knot."""
+        """Delete the currently selected knot and renumber higher IDs."""
         self.hide_messages.emit()
         
         if not self._current_project or not self._current_board:
@@ -623,10 +621,25 @@ class KnotsViewModel(QObject):
             return
 
         try:
+            deleted_id = int(self._current_knot_no)
             if self.repo.delete_knot(self._current_knot_no, self._current_board, self._current_project):
+                # Remove from in-memory list
                 self._knots = [k for k in self._knots if str(k.knot_no) != self._current_knot_no]
+
+                # Decrement IDs of all knots that had a higher ID than the deleted one.
+                # Must process in ascending order to avoid ID collisions during rename.
+                knots_to_renumber = sorted(
+                    [k for k in self._knots if int(k.knot_no) > deleted_id],
+                    key=lambda k: int(k.knot_no)
+                )
+                for k in knots_to_renumber:
+                    old_id = str(k.knot_no)
+                    new_id = str(int(k.knot_no) - 1)
+                    self.repo.rename_knot_id(old_id, new_id, self._current_board, self._current_project)
+                    k.knot_no = new_id
+
                 self.knots_changed.emit(self.knot_list)
-                
+
                 if self._knots:
                     self.current_knot_no = str(self._knots[0].knot_no)
                 else:
