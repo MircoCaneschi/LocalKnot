@@ -41,8 +41,8 @@ class BoardsViewModel(QObject):
         # Internal state
         self._boards = []
         self._current_board_no = ""
-        self._height = 0.0
-        self._base = 0.0
+        self._height = 0
+        self._base = 0
         self._length = 0.0
         self._test_position = ""
         self._comment = ""
@@ -73,32 +73,32 @@ class BoardsViewModel(QObject):
             if not self._board_editable:
                 self.handle_board_selected(value)
 
-    @Property(float)
-    def height(self) -> float:
+    @Property(int)
+    def height(self) -> int:
         """Get the height value."""
         return self._height
 
     @height.setter
-    def height(self, value: float):
+    def height(self, value: int):
         """Set the height value."""
         try:
-            val = float(value)
+            val = int(value)
             if self._height != val:
                 self._height = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(float)
-    def base(self) -> float:
+    @Property(int)
+    def base(self) -> int:
         """Get the base value."""
         return self._base
 
     @base.setter
-    def base(self, value: float):
+    def base(self, value: int):
         """Set the base value."""
         try:
-            val = float(value)
+            val = int(value)
             if self._base != val:
                 self._base = val
                 self._mark_dirty()
@@ -187,8 +187,8 @@ class BoardsViewModel(QObject):
         self.board_editable_changed.emit(True)
         
         self.current_board_no = ""
-        self._height = 0.0
-        self._base = 0.0
+        self._height = 0
+        self._base = 0
         self._length = 0.0
         self._test_position = 0
         self._comment = ""

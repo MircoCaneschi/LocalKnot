@@ -123,8 +123,8 @@ class BoardsView:
         
         float_regex = QRegularExpression(r"^[0-9]*([.,][0-9]{0,2})?$")
         
-        self.height_line.setValidator(QRegularExpressionValidator(float_regex))
-        self.base_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.height_line.setValidator(QIntValidator(1, 9999))
+        self.base_line.setValidator(QIntValidator(1, 9999))
         self.length_line.setValidator(QRegularExpressionValidator(float_regex))
         self.testpos_line.setValidator(QIntValidator(0, 999999))
         
@@ -186,8 +186,8 @@ class BoardsView:
         
         float_regex = QRegularExpression(r"^[0-9]*([.,][0-9]{0,2})?$")
         
-        self.hidden_height_line.setValidator(QRegularExpressionValidator(float_regex))
-        self.hidden_base_line.setValidator(QRegularExpressionValidator(float_regex))
+        self.hidden_height_line.setValidator(QIntValidator(1, 9999))
+        self.hidden_base_line.setValidator(QIntValidator(1, 9999))
         self.hidden_length_line.setValidator(QRegularExpressionValidator(float_regex))
 
         height = QFormLayout()
@@ -244,18 +244,18 @@ class BoardsView:
         self.hidden_board_no_combo.currentTextChanged.connect(lambda text: setattr(self.view_model, 'current_board_no', text))
 
         def _parse_float(text: str):
-            """Accept both '.' and ',' as decimal separator."""
+            """Accept both '.' and ',' as decimal separator (used for length only)."""
             return text.replace(',', '.') if text else 0
 
         # Line edits sync with ViewModel
-        self.height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', _parse_float(self.height_line.text())))
-        self.base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', _parse_float(self.base_line.text())))
+        self.height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', self.height_line.text() or 0))
+        self.base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', self.base_line.text() or 0))
         self.length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', _parse_float(self.length_line.text())))
         self.testpos_line.textChanged.connect(lambda: setattr(self.view_model, 'test_position', self.testpos_line.text()))
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
         
-        self.hidden_height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', _parse_float(self.hidden_height_line.text())))
-        self.hidden_base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', _parse_float(self.hidden_base_line.text())))
+        self.hidden_height_line.textChanged.connect(lambda: setattr(self.view_model, 'height', self.hidden_height_line.text() or 0))
+        self.hidden_base_line.textChanged.connect(lambda: setattr(self.view_model, 'base', self.hidden_base_line.text() or 0))
         self.hidden_length_line.textChanged.connect(lambda: setattr(self.view_model, 'length', _parse_float(self.hidden_length_line.text())))
 
         # Sync main and hidden line edits directly
@@ -314,16 +314,16 @@ class BoardsView:
             s = f"{val:.2f}".rstrip('0').rstrip('.')
             return s if s else "0"
             
-        self.height_line.setText(format_float(self.view_model.height))
-        self.base_line.setText(format_float(self.view_model.base))
+        self.height_line.setText(str(self.view_model.height))
+        self.base_line.setText(str(self.view_model.base))
         self.length_line.setText(format_float(self.view_model.length))
         self.testpos_line.setText(str(self.view_model.test_position))
         self.comment_line.setText(str(self.view_model.comment))
         
         if self.hidden_height_line:
-            self.hidden_height_line.setText(format_float(self.view_model.height))
+            self.hidden_height_line.setText(str(self.view_model.height))
         if self.hidden_base_line:
-            self.hidden_base_line.setText(format_float(self.view_model.base))
+            self.hidden_base_line.setText(str(self.view_model.base))
         if self.hidden_length_line:
             self.hidden_length_line.setText(format_float(self.view_model.length))
             

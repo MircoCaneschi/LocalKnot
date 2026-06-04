@@ -151,11 +151,6 @@ class VirtualBoardView(QWidget):
         self.knots_vm.virtual_board_error.connect(self._on_virtual_board_error)
         self.knots_vm.hide_messages.connect(self.error_msg.hide)
 
-        # Redraw whenever the user edits a side field directly in the virtual board
-        for group in self.inputs.values():
-            for le in group.values():
-                le.textEdited.connect(self._redraw_board)
-        
         # Initial sync
         update_ui_from_vm()
         self._redraw_board()

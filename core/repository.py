@@ -266,7 +266,7 @@ class BoardRepository:
             cursor = conn.cursor()
             cursor.execute("SELECT id_board, id_project, height, base, length, testpos, comment FROM board WHERE id_project = ?", (project_id,))
             rows = cursor.fetchall()
-            return [Board(board_no=row[0], height=row[2], base=row[3], length=row[4], test_position=row[5], comment=row[6]) for row in rows]
+            return [Board(board_no=row[0], height=int(row[2]), base=int(row[3]), length=row[4], test_position=row[5], comment=row[6]) for row in rows]
 
     @handle_db_errors
     def get_board_by_id(self, board_id: str, project_id: str) -> Optional[Board]:
@@ -276,7 +276,7 @@ class BoardRepository:
             cursor.execute("SELECT id_board, id_project, height, base, length, testpos, comment FROM board WHERE id_board = ? AND id_project = ?", (board_id, project_id))
             row = cursor.fetchone()
             if row:
-                return Board(board_no=row[0], height=row[2], base=row[3], length=row[4], test_position=row[5], comment=row[6])
+                return Board(board_no=row[0], height=int(row[2]), base=int(row[3]), length=row[4], test_position=row[5], comment=row[6])
             return None
 
     @handle_db_errors

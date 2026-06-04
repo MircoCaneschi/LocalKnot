@@ -87,8 +87,8 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS board (
                     id_board INTEGER NOT NULL,
                     id_project TEXT NOT NULL,
-                    height REAL NOT NULL, 
-                    base REAL NOT NULL,
+                    height INTEGER NOT NULL,
+                    base INTEGER NOT NULL,
                     length INTEGER NOT NULL,
                     testpos INTEGER ,
                     comment TEXT,
@@ -97,6 +97,14 @@ class DatabaseManager:
                     FOREIGN KEY (id_project) REFERENCES project (id_project) ON DELETE CASCADE
                 )
             ''')
+
+            # --- Migration: convert height/base from REAL to INTEGER if needed ---
+            cursor.execute("PRAGMA table_info(board)")
+            col_types = {row[1]: row[2] for row in cursor.fetchall()}
+            if col_types.get('height', '').upper() == 'REAL' or col_types.get('base', '').upper() == 'REAL':
+                cursor.execute("UPDATE board SET height = CAST(ROUND(height) AS INTEGER), "
+                               "base = CAST(ROUND(base) AS INTEGER)")
+
 
             # KNOT table
             cursor.execute('''

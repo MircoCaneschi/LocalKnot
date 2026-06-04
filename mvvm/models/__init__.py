@@ -91,23 +91,23 @@ class Board:
 
     Attributes:
         board_no (int | str): Board identifier
-        height (float): Board height measurement
-        base (float): Board base measurement
+        height (int): Board height measurement
+        base (int): Board base measurement
         length (float): Board length measurement
         test_position (int): Test position reference
         comment (str): Additional notes about the board
     """
 
-    def __init__(self, board_no: int | str, height: float = 0.0,
-                 base: float = 0.0, length: float = 0.0,
+    def __init__(self, board_no: int | str, height: int = 0,
+                 base: int = 0, length: float = 0.0,
                  test_position: int = 0, comment: str = ""):
         """
         Initialize a Board.
 
         Args:
             board_no: Unique board identifier
-            height: Height measurement
-            base: Base measurement
+            height: Height measurement (integer mm)
+            base: Base measurement (integer mm)
             length: Length measurement
             test_position: Test position reference
             comment: Additional notes
