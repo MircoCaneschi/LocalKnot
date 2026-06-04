@@ -48,9 +48,19 @@ class VirtualBoardView(QWidget):
             
             group_inputs = {}
             
+            # Extract side number from name e.g. "side1_top" -> "Side 1:"
+            side_num = side_name.split("_")[0].replace("side", "")
+            side_label = QLabel(f"<b>Side {side_num}:</b>")
+            side_label.setStyleSheet("font-size: 14px; text-decoration: underline; margin-right: 10px;")
+            
             if orientation == "horizontal":
-                layout = QHBoxLayout(container)
-                layout.setContentsMargins(5, 5, 5, 5)
+                outer = QHBoxLayout(container)
+                outer.setContentsMargins(5, 3, 5, 3)
+                outer.setSpacing(2)
+                outer.addWidget(side_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+                
+                layout = QHBoxLayout()
+                layout.setContentsMargins(0, 0, 0, 0)
                 for field in ["z1", "z2", "dmin"]:
                     form = QFormLayout()
                     form.setContentsMargins(0, 0, 0, 0)
@@ -60,10 +70,15 @@ class VirtualBoardView(QWidget):
                     form.addRow(f"{field}:", line_edit)
                     layout.addLayout(form)
                     group_inputs[field] = line_edit
+                outer.addLayout(layout)
             else:
-                layout = QFormLayout(container)
-                layout.setContentsMargins(5, 5, 5, 5)
-                # Align labels to the right so they stick close to the line edits
+                outer = QVBoxLayout(container)
+                outer.setContentsMargins(5, 3, 5, 3)
+                outer.setSpacing(2)
+                outer.addWidget(side_label, alignment=Qt.AlignmentFlag.AlignHCenter)
+                
+                layout = QFormLayout()
+                layout.setContentsMargins(0, 0, 0, 0)
                 layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
                 for field in ["z1", "z2", "dmin"]:
                     line_edit = QLineEdit()
@@ -71,9 +86,11 @@ class VirtualBoardView(QWidget):
                     line_edit.setMaximumWidth(60)
                     layout.addRow(f"{field}:", line_edit)
                     group_inputs[field] = line_edit
+                outer.addLayout(layout)
                     
             self.inputs[side_name] = group_inputs
             return container
+
 
         # Creation of the 4 sides
         top_widget = create_side_inputs("side1_top", "horizontal")
@@ -191,7 +208,59 @@ class VirtualBoardView(QWidget):
         
         # Disegno della sezione della tavola
         board_rect = self.scene.addRect(0, 0, hight, base, board_pen, QBrush(QColor(240, 230, 210)))
-        
+
+        # ── Coordinate-convention arrows ──────────────────────────────────────
+        # Drawn always (when a board exists), outside the board rect, parallel
+        # to each side, pointing in the direction of increasing z.
+        #
+        # Side 1 (top,    y=0):     z grows right→left  (hight → 0)
+        # Side 2 (right,  x=hight): z grows bottom→top  (base  → 0)
+        # Side 3 (bottom, y=base):  z grows left→right  (0     → hight)
+        # Side 4 (left,   x=0):     z grows top→bottom  (0     → base)
+
+        _arrow_pen = QPen(QColor(50, 100, 200), 3)
+        _arrow_pen.setCosmetic(True)
+        _arrow_color = QColor(50, 100, 200)
+        _gap = 4  # fixed distance (in scene/mm units) from board edge to arrow — constant for all board sizes
+
+        # Fixed arrowhead size regardless of which side / arrow length
+        _head_len = min(hight, base) * 0.035
+        _head_wide = _head_len * 0.50
+
+        def _draw_arrow(x1, y1, x2, y2):
+            import math
+            dx, dy = x2 - x1, y2 - y1
+            length = math.hypot(dx, dy)
+            if length == 0:
+                return
+            ux, uy = dx / length, dy / length   # unit vector (tail → tip)
+            px, py = -uy, ux                    # perpendicular
+
+            tip = QPointF(x2, y2)
+            # Tail ends just before the arrowhead base
+            tail_end = QPointF(x2 - ux * _head_len, y2 - uy * _head_len)
+            self.scene.addLine(x1, y1, tail_end.x(), tail_end.y(), _arrow_pen)
+
+            bm = tail_end
+            lp = QPointF(bm.x() + px * _head_wide, bm.y() + py * _head_wide)
+            rp = QPointF(bm.x() - px * _head_wide, bm.y() - py * _head_wide)
+            self.scene.addPolygon(QPolygonF([tip, lp, rp]), _arrow_pen, QBrush(_arrow_color))
+
+        _al_h = hight * 0.10   # total arrow length along height axis (10% of side)
+        _al_b = base  * 0.10   # total arrow length along base  axis (10% of side)
+
+        # Side 1 – above top edge (y=0), arrow points left
+        _draw_arrow(hight, -_gap, hight - _al_h, -_gap)
+
+        # Side 2 – right edge (x=hight), arrow points up
+        _draw_arrow(hight + _gap, base, hight + _gap, base - _al_b)
+
+        # Side 3 – below bottom edge (y=base), arrow points right
+        _draw_arrow(0, base + _gap, _al_h, base + _gap)
+
+        # Side 4 – left edge (x=0), arrow points down
+        _draw_arrow(-_gap, 0, -_gap, _al_b)
+
         vm = self.knots_vm
         pith_z = vm.pith_z
         pith_y = vm.pith_y
@@ -209,6 +278,8 @@ class VirtualBoardView(QWidget):
         
         has_knot_data = any(z2 is not None for _, z1, z2 in faces_data)
         if not has_knot_data:
+            if self.scene.sceneRect().isValid():
+                self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
             return
             
         points_on_faces = []
@@ -285,7 +356,6 @@ class VirtualBoardView(QWidget):
                 poly = QPolygonF(unique_border_pts)
                 self.scene.addPolygon(poly, knot_pen, knot_brush)
 
-                
         # Forza il ridimensionamento della vista per farla fittare nello spazio a disposizione
         if self.scene.sceneRect().isValid():
             self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
@@ -344,5 +414,3 @@ class VirtualBoardView(QWidget):
             prefix = side.split("_")[0]
             for field, le in group.items():
                 prop_name = f"{prefix}_{field}"
-                if prop_name in invalid_fields:
-                    _flash_widget(le)
