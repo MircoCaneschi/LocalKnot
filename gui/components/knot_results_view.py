@@ -2,11 +2,40 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QGroupBox, QLabel, QFrame, QStyle
 )
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, Property
 from PySide6.QtGui import QPainter, QPainterPath, QColor, QPixmap
 
 class FlaredTabButton(QPushButton):
-    """A custom button that draws an outward-flared tab shape at the top."""
+    """A custom button that draws an outward-flared tab shape at the top.
+    
+    Colors are controlled via QSS custom properties:
+        qproperty-normalColor
+        qproperty-hoverColor
+        qproperty-pressedColor
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Default colors — overridden by QSS qproperty-* declarations
+        self._normal_color = QColor("#824300")
+        self._hover_color = QColor("#A85C0A")
+        self._pressed_color = QColor("#A85C0A")
+
+    # --- normalColor property ---
+    def _get_normal_color(self): return self._normal_color
+    def _set_normal_color(self, color): self._normal_color = QColor(color); self.update()
+    normalColor = Property(QColor, _get_normal_color, _set_normal_color)
+
+    # --- hoverColor property ---
+    def _get_hover_color(self): return self._hover_color
+    def _set_hover_color(self, color): self._hover_color = QColor(color); self.update()
+    hoverColor = Property(QColor, _get_hover_color, _set_hover_color)
+
+    # --- pressedColor property ---
+    def _get_pressed_color(self): return self._pressed_color
+    def _set_pressed_color(self, color): self._pressed_color = QColor(color); self.update()
+    pressedColor = Property(QColor, _get_pressed_color, _set_pressed_color)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -36,11 +65,11 @@ class FlaredTabButton(QPushButton):
         path.lineTo(0, 0)
         
         if self.isDown():
-            color = QColor("#A85C0A")
+            color = self._pressed_color
         elif self.underMouse():
-            color = QColor("#A85C0A")
+            color = self._hover_color
         else:
-            color = QColor("#824300")
+            color = self._normal_color
             
         painter.fillPath(path, color)
         

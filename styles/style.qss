@@ -1,16 +1,19 @@
 QMainWindow {
-    background-color: #F59D67;
+    background-color: #959acd;
 }
 QGroupBox {
-    background-color: #BD8142;
-    color: #824300;
+    background-color: #4a4986;
+    color: #bea6f9;
     border-radius: 10px;
     padding: 10px;
     font-size: 10pt;
     font-weight: bold;
 }
+QGroupBox > QLabel{
+    color: #bea6f9;
+}
 QPushButton {
-    background-color: #824300;
+    background-color: #000082;
     color: white;
     padding: 5px;
     border-radius: 10px;
@@ -19,16 +22,16 @@ QPushButton:hover {
     color: yellow;
 }
 QPushButton:pressed {
-    background-color: #A85C0A;
+    background-color: #5c58ce;
     padding-left: 7px;
     padding-top: 7px;
 }
 QPushButton:disabled {
-    background-color: #A06A33;
-    color: #D3A87C;
+    background-color: #9f91f7;
+    color: #324493;
 }
 QLabel {
-    color: #824300;
+    color: #324493;
     font-size: 9pt;
 }
 
@@ -36,7 +39,7 @@ QLabel {
 QLabel#HeaderTitle {
     font-size: 24pt;
     font-weight: bold;
-    color: #824300; /* Keep the theme color */
+    color: #37109a; /* Keep the theme color */
 }
 
 /* --- QScrollArea --- */
@@ -58,7 +61,7 @@ QScrollBar:vertical {
 }
 
 QScrollBar::handle:vertical {
-    background: #824300;
+    background: #000082;
     min-height: 20px;
     /* Visual width is 6px (14px total - 4px left - 4px right).
        In Qt, border-radius CANNOT exceed half the width (3px),
@@ -68,7 +71,7 @@ QScrollBar::handle:vertical {
 }
 
 QScrollBar::handle:vertical:hover {
-    background: #A85C0A;
+    background: #4a4986;
     /* Expanding on hover: Visual width becomes 10px (14px - 2px left - 2px right).
        We can increase the radius up to 5px to keep it rounded. */
     border-radius: 5px;
@@ -93,7 +96,7 @@ QScrollBar:horizontal {
 }
 
 QScrollBar::handle:horizontal {
-    background: #824300;
+    background: #000082;
     min-width: 20px;
     /* Visual height is 6px (14px - 4px top - 4px bottom) -> max radius 3px */
     border-radius: 3px;
@@ -101,7 +104,7 @@ QScrollBar::handle:horizontal {
 }
 
 QScrollBar::handle:horizontal:hover {
-    background: #A85C0A;
+    background: #4a4986;
     /* Visual height becomes 10px -> max radius 5px */
     border-radius: 5px;
     margin: 2px 2px 2px 2px;
@@ -117,12 +120,16 @@ QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
 }
 
 /* --- Results Toggle Button --- */
+/* normalColor, hoverColor, pressedColor are read by FlaredTabButton.paintEvent */
 QPushButton#ResultsToggleBtn {
     background-color: transparent;
     border: none;
     margin-top: 0px;
     padding-top: 0px;
     padding-bottom: 0px;
+    qproperty-normalColor: #4a4986;
+    qproperty-hoverColor: #5c58ce;
+    qproperty-pressedColor: #37109a;
 }
 QPushButton#ResultsToggleBtn:hover {
     background-color: transparent;
@@ -134,19 +141,14 @@ QPushButton#ResultsToggleBtn:pressed {
 }
 
 /* --- Results Divider --- */
+/* margin matches QGroupBox border-radius so the line aligns with the rounded box edges */
 QFrame#ResultsDivider {
-    background-color: #824300;
+    background-color: #4a4986;
     min-height: 2px;
     max-height: 2px;
     border: none;
-}
-
-/* --- Results Divider --- */
-QFrame#ResultsDivider {
-    background-color: #824300;
-    min-height: 2px;
-    max-height: 2px;
-    border: none;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 /* --- Virtual Board Side Inputs --- */
