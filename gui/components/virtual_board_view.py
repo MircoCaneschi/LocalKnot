@@ -198,9 +198,8 @@ class VirtualBoardView(QWidget):
         if base <= 0 or hight <= 0:
             return
             
-        margin = 5
-        # Lasciamo spazio verticale per il disegno longitudinale (es. 1.3x base invece di 2.5x)
-        self.scene.setSceneRect(-margin, -margin, hight + 2*margin, base * 1.3 + 2*margin)
+        # La sceneRect viene ora calcolata in modo dinamico alla fine del disegno
+        # per includere la tavola e tutte le frecce.
         
         # Penna cosmetica per i bordi (rimane sottile a qualsiasi livello di zoom)
         board_pen = QPen(Qt.black, 1.5)
@@ -221,7 +220,7 @@ class VirtualBoardView(QWidget):
         _arrow_pen = QPen(QColor(50, 100, 200), 3)
         _arrow_pen.setCosmetic(True)
         _arrow_color = QColor(50, 100, 200)
-        _gap = 4  # fixed distance (in scene/mm units) from board edge to arrow — constant for all board sizes
+        _gap = min(hight, base) * 0.06  # proportional distance to avoid overlaps at different zoom levels
 
         # Fixed arrowhead size regardless of which side / arrow length
         _head_len = min(hight, base) * 0.035
@@ -246,22 +245,81 @@ class VirtualBoardView(QWidget):
             rp = QPointF(bm.x() - px * _head_wide, bm.y() - py * _head_wide)
             self.scene.addPolygon(QPolygonF([tip, lp, rp]), _arrow_pen, QBrush(_arrow_color))
 
-        _al_h = hight * 0.10   # total arrow length along height axis (10% of side)
-        _al_b = base  * 0.10   # total arrow length along base  axis (10% of side)
+        _al = min(hight, base) * 0.20   # fixed length for all blue arrows (20% of min side)
 
         # Side 1 – above top edge (y=0), arrow points left
-        _draw_arrow(hight, -_gap, hight - _al_h, -_gap)
+        _draw_arrow(hight, -_gap, hight - _al, -_gap)
 
         # Side 2 – right edge (x=hight), arrow points up
-        _draw_arrow(hight + _gap, base, hight + _gap, base - _al_b)
+        _draw_arrow(hight + _gap, base, hight + _gap, base - _al)
 
         # Side 3 – below bottom edge (y=base), arrow points right
-        _draw_arrow(0, base + _gap, _al_h, base + _gap)
+        _draw_arrow(0, base + _gap, _al, base + _gap)
 
         # Side 4 – left edge (x=0), arrow points down
-        _draw_arrow(-_gap, 0, -_gap, _al_b)
+        _draw_arrow(-_gap, 0, -_gap, _al)
+
+        # ── Pith coordinate system indicator ──────────────────────────────────
+        # Two red arrows anchored at the bottom-right corner of the board:
+        #   horizontal (← left)  → pith_z is measured from the right edge
+        #   vertical   (↑ up)    → pith_y is measured from the bottom edge
+        _pith_ax_len   = min(hight, base) * 0.20
+        _pith_head_len = _pith_ax_len * 0.18
+        _pith_head_w   = _pith_head_len * 0.5
+        _pith_pen      = QPen(QColor(200, 0, 0), 2)
+        _pith_pen.setCosmetic(True)
+        _pith_color    = QColor(200, 0, 0)
+
+        def _draw_pith_axis(x1, y1, x2, y2, label, lbl_x, lbl_y, rotation=0):
+            import math
+            dx, dy = x2 - x1, y2 - y1
+            length = math.hypot(dx, dy)
+            if length == 0:
+                return
+            ux, uy = dx / length, dy / length
+            px, py = -uy, ux
+            tip      = QPointF(x2, y2)
+            tail_end = QPointF(x2 - ux * _pith_head_len, y2 - uy * _pith_head_len)
+            line = self.scene.addLine(x1, y1, tail_end.x(), tail_end.y(), _pith_pen)
+            line.setZValue(7)
+            bm = tail_end
+            lp   = QPointF(bm.x() + px * _pith_head_w, bm.y() + py * _pith_head_w)
+            rp   = QPointF(bm.x() - px * _pith_head_w, bm.y() - py * _pith_head_w)
+            head = self.scene.addPolygon(QPolygonF([tip, lp, rp]), _pith_pen, QBrush(_pith_color))
+            head.setZValue(7)
+            lbl = self.scene.addSimpleText(label)
+            lbl.setBrush(QBrush(_pith_color))
+            font = QFont()
+            font.setPixelSize(12)
+            lbl.setFont(font)
+            lbl.setFlag(lbl.GraphicsItemFlag.ItemIgnoresTransformations, True)
+            lbl.setPos(lbl_x, lbl_y)
+            lbl.setRotation(rotation)
+            lbl.setZValue(9)
+
+        # offset the pith origin outward along the bisector to avoid overlapping blue arrows
+        _ox = hight + _gap * 2.5
+        _oy = base + _gap * 2.5
+        _dist = 1  # Distanza ridotta per tenere il testo più vicino alla freccia
+        
+        # Horizontal arrow → left (pith_z); label just below midpoint
+        _draw_pith_axis(
+            _ox, _oy,
+            _ox - _pith_ax_len, _oy,
+            "pith_z",
+            _ox - _pith_ax_len * 0.75, _oy + _dist,
+        )
+        # Vertical arrow → up (pith_y); label to the right of the arrow, rotated -90
+        _draw_pith_axis(
+            _ox, _oy,
+            _ox, _oy - _pith_ax_len,
+            "pith_y",
+            _ox + _dist, _oy - _pith_ax_len * 0.25,
+            rotation=-90
+        )
 
         vm = self.knots_vm
+
 
         # Conversione coordinate: X = hight - z, Y = base - y
         def map_x(z): return hight - z
@@ -318,8 +376,13 @@ class VirtualBoardView(QWidget):
                 ):
                     unique_border_pts.append(pt)
 
-            pith_z = getattr(knot_obj, 'pith_z', None)
-            pith_y = getattr(knot_obj, 'pith_y', None)
+            is_pruned = getattr(knot_obj, 'is_pruned_knot', False)
+            if is_pruned:
+                pith_z = getattr(knot_obj, 'pruned_z', None)
+                pith_y = getattr(knot_obj, 'pruned_y', None)
+            else:
+                pith_z = getattr(knot_obj, 'pith_z', None)
+                pith_y = getattr(knot_obj, 'pith_y', None)
             has_pith = (pith_z is not None and pith_z > 0) or (pith_y is not None and pith_y > 0)
             pith_point = None
             if has_pith and pith_z is not None and pith_y is not None:
@@ -415,6 +478,9 @@ class VirtualBoardView(QWidget):
             proxy.side4_z1 = vm.side4_z1; proxy.side4_z2 = vm.side4_z2
             proxy.pith_z   = vm.pith_z
             proxy.pith_y   = vm.pith_y
+            proxy.is_pruned_knot = vm.is_pruned_knot
+            proxy.pruned_z = vm.pruned_z
+            proxy.pruned_y = vm.pruned_y
 
             selected_brush      = QBrush(QColor(139, 69, 19, 210))
             selected_pen        = QPen(QColor(80, 40, 10), 2.0)
@@ -434,9 +500,17 @@ class VirtualBoardView(QWidget):
                 label_color=QColor(40, 10, 0),
             )
 
+        # Calcoliamo il rettangolo di ingombro totale (frecce blu a -_gap, frecce rosse a _ox, _oy)
+        # Aggiungiamo un margine proporzionale del 10% per contenere comodamente anche le scritte
+        pad = max(hight, base) * 0.10
+        min_x = -_gap - pad
+        min_y = -_gap - pad
+        max_x = _ox + pad
+        max_y = _oy + pad
+        self.scene.setSceneRect(min_x, min_y, max_x - min_x, max_y - min_y)
+        
         # Forza il ridimensionamento della vista per farla fittare nello spazio a disposizione
-        if self.scene.sceneRect().isValid():
-            self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def _on_virtual_board_error(self, msg: str):
         """Show error message and flash it."""

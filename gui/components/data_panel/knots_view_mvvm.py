@@ -33,7 +33,7 @@ class KnotsView:
         self.pith_z_line = None
         self.pith_y_line = None
         self.comment_line = None
-        self.fake_pith = None
+        self.pruned_knot = None
         self.knot_msg = None
 
         # Hidden panel components
@@ -44,7 +44,10 @@ class KnotsView:
         self.hidden_x_line = None
         self.hidden_pith_z_line = None
         self.hidden_pith_y_line = None
-        self.hidden_fake_pith = None
+        self.hidden_pruned_knot = None
+        
+        self._last_pruned_state = False
+        self._fade_in_anim = None
         
         # Label references for animation
         self.x_label = None
@@ -125,8 +128,8 @@ class KnotsView:
         self.pith_y_line.setValidator(validator)
         
         self.comment_line = QLineEdit()
-        self.fake_pith = QCheckBox()
-        self.fake_pith.setChecked(False)
+        self.pruned_knot = QCheckBox()
+        self.pruned_knot.setChecked(False)
 
         self.x_label = QLabel("X")
         self.pith_z_label = QLabel("Pith Z")
@@ -135,7 +138,7 @@ class KnotsView:
         data_layout.addRow(self.pith_z_label, self.pith_z_line)
         data_layout.addRow(self.pith_y_label, self.pith_y_line)
         data_layout.addRow("Comment", self.comment_line)
-        data_layout.addRow("Fake pith", self.fake_pith)
+        data_layout.addRow("Pruned knot", self.pruned_knot)
 
         # Message label
         self.knot_msg = QLabel()
@@ -207,9 +210,9 @@ class KnotsView:
         hidden_data_layout.addLayout(pith_z)
         hidden_data_layout.addLayout(pith_y)
 
-        self.hidden_fake_pith = QCheckBox()
-        self.hidden_fake_pith.setChecked(False)
-        hidden_data_layout.addWidget(self.hidden_fake_pith)
+        self.hidden_pruned_knot = QCheckBox()
+        self.hidden_pruned_knot.setChecked(False)
+        hidden_data_layout.addWidget(self.hidden_pruned_knot)
 
         # grid disposition
         self.hidden_main_layout.addLayout(hidden_top_layout, 0, 1, 1, 1)
@@ -228,7 +231,7 @@ class KnotsView:
                    self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line]:
             le.textEdited.connect(self._hide_messages)
 
-        for cb in [self.fake_pith, self.hidden_fake_pith]:
+        for cb in [self.pruned_knot, self.hidden_pruned_knot]:
             cb.clicked.connect(self._hide_messages)
 
         for btn in [self.new_btn, self.delete_btn, self.right_shift_btn, self.left_shift_btn,
@@ -249,16 +252,16 @@ class KnotsView:
 
         # Line edits sync with ViewModel
         self.x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.x_line.text() or 0))
-        self.pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.pith_z_line.text()))
-        self.pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.pith_y_line.text()))
+        self.pith_z_line.textChanged.connect(self._update_z)
+        self.pith_y_line.textChanged.connect(self._update_y)
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
-        self.fake_pith.stateChanged.connect(lambda: setattr(self.view_model, 'is_fake_pith', self.fake_pith.isChecked()))
+        self.pruned_knot.stateChanged.connect(lambda: setattr(self.view_model, 'is_pruned_knot', self.pruned_knot.isChecked()))
 
         # Also sync hidden components with ViewModel
         self.hidden_x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.hidden_x_line.text() or 0))
-        self.hidden_pith_z_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_z', self.hidden_pith_z_line.text()))
-        self.hidden_pith_y_line.textChanged.connect(lambda: setattr(self.view_model, 'pith_y', self.hidden_pith_y_line.text()))
-        self.hidden_fake_pith.stateChanged.connect(lambda: setattr(self.view_model, 'is_fake_pith', self.hidden_fake_pith.isChecked()))
+        self.hidden_pith_z_line.textChanged.connect(self._update_z)
+        self.hidden_pith_y_line.textChanged.connect(self._update_y)
+        self.hidden_pruned_knot.stateChanged.connect(lambda: setattr(self.view_model, 'is_pruned_knot', self.hidden_pruned_knot.isChecked()))
 
         # Sync main and hidden components directly
         self.x_line.textEdited.connect(self.hidden_x_line.setText)
@@ -270,8 +273,8 @@ class KnotsView:
         self.pith_y_line.textEdited.connect(self.hidden_pith_y_line.setText)
         self.hidden_pith_y_line.textEdited.connect(self.pith_y_line.setText)
         
-        self.fake_pith.toggled.connect(self.hidden_fake_pith.setChecked)
-        self.hidden_fake_pith.toggled.connect(self.fake_pith.setChecked)
+        self.pruned_knot.toggled.connect(self.hidden_pruned_knot.setChecked)
+        self.hidden_pruned_knot.toggled.connect(self.pruned_knot.setChecked)
 
         # ViewModel Signals → View update methods
         self.view_model.knots_changed.connect(self._on_knots_changed)
@@ -283,6 +286,18 @@ class KnotsView:
         self.view_model.hide_messages.connect(self.knot_msg.hide)
         self.view_model.save_enabled_changed.connect(self.save_btn.setEnabled)
         self.view_model.validation_failed.connect(self._on_validation_failed)
+
+    def _update_z(self, text):
+        if self.pruned_knot.isChecked():
+            setattr(self.view_model, 'pruned_z', text)
+        else:
+            setattr(self.view_model, 'pith_z', text)
+            
+    def _update_y(self, text):
+        if self.pruned_knot.isChecked():
+            setattr(self.view_model, 'pruned_y', text)
+        else:
+            setattr(self.view_model, 'pith_y', text)
 
     # ==================== SIGNAL HANDLERS ====================
 
@@ -313,24 +328,46 @@ class KnotsView:
         
         for le in line_edits:
             le.blockSignals(True)
-        self.fake_pith.blockSignals(True)
-        self.hidden_fake_pith.blockSignals(True)
+        self.pruned_knot.blockSignals(True)
+        self.hidden_pruned_knot.blockSignals(True)
 
         self.x_line.setText(str(self.view_model.x))
-        self.pith_z_line.setText("" if self.view_model.pith_z is None else str(self.view_model.pith_z))
-        self.pith_y_line.setText("" if self.view_model.pith_y is None else str(self.view_model.pith_y))
         self.comment_line.setText(self.view_model.comment)
-        self.fake_pith.setChecked(self.view_model.is_fake_pith)
-        
+        self.pruned_knot.setChecked(self.view_model.is_pruned_knot)
         self.hidden_x_line.setText(str(self.view_model.x))
-        self.hidden_pith_z_line.setText("" if self.view_model.pith_z is None else str(self.view_model.pith_z))
-        self.hidden_pith_y_line.setText("" if self.view_model.pith_y is None else str(self.view_model.pith_y))
-        self.hidden_fake_pith.setChecked(self.view_model.is_fake_pith)
+        self.hidden_pruned_knot.setChecked(self.view_model.is_pruned_knot)
+        
+        is_pruned = self.view_model.is_pruned_knot
+        if is_pruned:
+            self.pith_z_label.setText("Pruned Z")
+            self.pith_y_label.setText("Pruned Y")
+            self.hidden_pith_z_label.setText("Pruned Z")
+            self.hidden_pith_y_label.setText("Pruned Y")
+            z_val = self.view_model.pruned_z
+            y_val = self.view_model.pruned_y
+        else:
+            self.pith_z_label.setText("Pith Z")
+            self.pith_y_label.setText("Pith Y")
+            self.hidden_pith_z_label.setText("Pith Z")
+            self.hidden_pith_y_label.setText("Pith Y")
+            z_val = self.view_model.pith_z
+            y_val = self.view_model.pith_y
+
+        self.pith_z_line.setText("" if z_val is None else str(z_val))
+        self.pith_y_line.setText("" if y_val is None else str(y_val))
+        self.hidden_pith_z_line.setText("" if z_val is None else str(z_val))
+        self.hidden_pith_y_line.setText("" if y_val is None else str(y_val))
+        
+        if getattr(self, '_last_pruned_state', None) is not None and self._last_pruned_state != is_pruned:
+            self._last_pruned_state = is_pruned
+            self._trigger_pruned_animation()
+        elif getattr(self, '_last_pruned_state', None) is None:
+            self._last_pruned_state = is_pruned
         
         for le in line_edits:
             le.blockSignals(False)
-        self.fake_pith.blockSignals(False)
-        self.hidden_fake_pith.blockSignals(False)
+        self.pruned_knot.blockSignals(False)
+        self.hidden_pruned_knot.blockSignals(False)
 
     def _on_knot_error(self, error_message: str):
         """Display error message on validation failure."""
@@ -365,6 +402,41 @@ class KnotsView:
         self.hidden_knot_no_combo.setCurrentText(text)
         self.knot_no_combo.blockSignals(False)
         self.hidden_knot_no_combo.blockSignals(False)
+        # Restart any hidden animations so they map correctly to the hidden state.
+        self._on_validation_failed([])
+
+    def _trigger_pruned_animation(self):
+        """Play a smooth fade-in animation on the fields when toggling pruned knot."""
+        from PySide6.QtCore import QVariantAnimation
+        from PySide6.QtWidgets import QGraphicsOpacityEffect
+        
+        self._fade_in_anim = QVariantAnimation()
+        self._fade_in_anim.setDuration(400)
+        self._fade_in_anim.setStartValue(0.0)
+        self._fade_in_anim.setEndValue(1.0)
+        
+        widgets = [
+            self.pith_z_label, self.pith_z_line, self.pith_y_label, self.pith_y_line,
+            self.hidden_pith_z_label, self.hidden_pith_z_line, self.hidden_pith_y_label, self.hidden_pith_y_line
+        ]
+        
+        def update_op(val):
+            for w in widgets:
+                if not w: continue
+                eff = w.graphicsEffect()
+                if not eff:
+                    eff = QGraphicsOpacityEffect(w)
+                    w.setGraphicsEffect(eff)
+                eff.setOpacity(val)
+                
+        def remove_effects():
+            for w in widgets:
+                if not w: continue
+                w.setGraphicsEffect(None)
+                
+        self._fade_in_anim.valueChanged.connect(update_op)
+        self._fade_in_anim.finished.connect(remove_effects)
+        self._fade_in_anim.start()
 
     def _on_validation_failed(self, invalid_fields: list):
         """Flash the labels of the invalid fields."""

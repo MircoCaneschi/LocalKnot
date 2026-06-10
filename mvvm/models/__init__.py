@@ -138,7 +138,9 @@ class Knot:
         x (float): X coordinate position
         pith_z (float): Pith Z coordinate
         pith_y (float): Pith Y coordinate
-        is_fake_pith (bool): Whether this is a fake pith
+        is_pruned_knot (bool): Whether this is a pruned knot
+        pruned_z (int): Pruned Z coordinate
+        pruned_y (int): Pruned Y coordinate
         comment (str): Additional notes about the knot
         side1_z1 (int): Top z1 coordinate
         side1_z2 (int): Top z2 coordinate
@@ -156,7 +158,7 @@ class Knot:
 
     def __init__(self, knot_no: int | str, x: int = 0,
                  pith_z: int | None = None, pith_y: int | None = None,
-                 is_fake_pith: bool = False, comment: str = "",
+                 is_pruned_knot: bool = False, pruned_z: int | None = None, pruned_y: int | None = None, comment: str = "",
                  side1_z1: int | None = None, side1_z2: int | None = None, side1_dmin: int | None = None,
                  side2_z1: int | None = None, side2_z2: int | None = None, side2_dmin: int | None = None,
                  side3_z1: int | None = None, side3_z2: int | None = None, side3_dmin: int | None = None,
@@ -169,14 +171,18 @@ class Knot:
             x: X coordinate
             pith_z: Pith Z coordinate
             pith_y: Pith Y coordinate
-            is_fake_pith: Whether pith is fake
+            is_pruned_knot: Whether knot is pruned
+            pruned_z: Pruned Z coordinate
+            pruned_y: Pruned Y coordinate
             comment: Additional notes
         """
         self.knot_no = knot_no
         self.x = x
         self.pith_z = pith_z
         self.pith_y = pith_y
-        self.is_fake_pith = is_fake_pith
+        self.is_pruned_knot = is_pruned_knot
+        self.pruned_z = pruned_z
+        self.pruned_y = pruned_y
         self.comment = comment
         
         # Side parameters

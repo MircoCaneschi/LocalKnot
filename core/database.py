@@ -116,7 +116,9 @@ class DatabaseManager:
                     pith_z INTEGER,
                     pith_y INTEGER,
                     comment TEXT,
-                    fake_pith BOOLEAN,
+                    pruned_knot BOOLEAN,
+                    pruned_z INTEGER,
+                    pruned_y INTEGER,
                     
                     side1_z1 INTEGER,
                     side1_z2 INTEGER,
@@ -138,6 +140,17 @@ class DatabaseManager:
                 )
             ''')
             conn.commit()
+
+            # --- Migration: add pruned_z and pruned_y columns if needed ---
+            cursor.execute("PRAGMA table_info(knot)")
+            col_names = [row[1] for row in cursor.fetchall()]
+            if 'pruned_z' not in col_names:
+                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_z INTEGER")
+            if 'pruned_y' not in col_names:
+                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_y INTEGER")
+            conn.commit()
+
+
 
     #--------TRANSACTIONS---------
 
