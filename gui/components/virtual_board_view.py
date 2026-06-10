@@ -173,7 +173,7 @@ class VirtualBoardView(QWidget):
         self._redraw_board()
 
     def _redraw_board(self):
-        from PySide6.QtGui import QPen, QBrush, QColor, QPolygonF
+        from PySide6.QtGui import QPen, QBrush, QColor, QPolygonF, QFont
         from PySide6.QtCore import QPointF, Qt
         
         self.scene.clear()
@@ -262,99 +262,177 @@ class VirtualBoardView(QWidget):
         _draw_arrow(-_gap, 0, -_gap, _al_b)
 
         vm = self.knots_vm
-        pith_z = vm.pith_z
-        pith_y = vm.pith_y
-        
+
         # Conversione coordinate: X = hight - z, Y = base - y
         def map_x(z): return hight - z
         def map_y(y): return base - y
-        
-        faces_data = [
-            (1, vm.side1_z1, vm.side1_z2),
-            (2, vm.side2_z1, vm.side2_z2),
-            (3, vm.side3_z1, vm.side3_z2),
-            (4, vm.side4_z1, vm.side4_z2),
-        ]
-        
-        has_knot_data = any(z2 is not None for _, z1, z2 in faces_data)
-        if not has_knot_data:
-            if self.scene.sceneRect().isValid():
-                self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
-            return
-            
-        points_on_faces = []
-        for face, z1, z2 in faces_data:
-            if z1 is not None and z2 is not None:
-                p1 = p2 = None
-                if face == 1:
-                    p1 = QPointF(map_x(z1), 0)
-                    p2 = QPointF(map_x(z2), 0)
-                elif face == 2:
-                    p1 = QPointF(hight, map_y(z1))
-                    p2 = QPointF(hight, map_y(z2))
-                elif face == 3:
-                    p1 = QPointF(z1, base)
-                    p2 = QPointF(z2, base)
-                elif face == 4:
-                    p1 = QPointF(0, z1)
-                    p2 = QPointF(0, z2)
-                
-                if p1 and p2:
-                    points_on_faces.append((face, p1, p2))
-                
-        if not points_on_faces:
-            return
-            
-        knot_brush = QBrush(QColor(139, 69, 19, 180))
-        knot_pen = QPen(QColor(101, 67, 33), 1.5)
-        knot_pen.setCosmetic(True)
 
-        # Sort all border points clockwise around the board perimeter.
-        # This is used both with and without a pith so the shape is always
-        # a clean outline with no internal dividing lines.
-        def get_perimeter_param(pt):
-            x, y = pt.x(), pt.y()
-            if abs(y - 0) < 0.1:       return x
-            elif abs(x - hight) < 0.1: return hight + y
-            elif abs(y - base) < 0.1:  return hight + base + (hight - x)
-            elif abs(x - 0) < 0.1:     return hight + base + hight + (base - y)
-            return 0
+        def build_knot_shape(knot_obj):
+            """Compute (border_points, pith_point) for any object with sideX_z1/z2 attributes."""
+            faces_data = [
+                (1, knot_obj.side1_z1, knot_obj.side1_z2),
+                (2, knot_obj.side2_z1, knot_obj.side2_z2),
+                (3, knot_obj.side3_z1, knot_obj.side3_z2),
+                (4, knot_obj.side4_z1, knot_obj.side4_z2),
+            ]
+            points_on_faces = []
+            for face, z1, z2 in faces_data:
+                if z1 is not None and z2 is not None:
+                    p1 = p2 = None
+                    if face == 1:
+                        p1 = QPointF(map_x(z1), 0)
+                        p2 = QPointF(map_x(z2), 0)
+                    elif face == 2:
+                        p1 = QPointF(hight, map_y(z1))
+                        p2 = QPointF(hight, map_y(z2))
+                    elif face == 3:
+                        p1 = QPointF(z1, base)
+                        p2 = QPointF(z2, base)
+                    elif face == 4:
+                        p1 = QPointF(0, z1)
+                        p2 = QPointF(0, z2)
+                    if p1 is not None and p2 is not None:
+                        points_on_faces.append((face, p1, p2))
 
-        all_border_pts = []
-        for _, p1, p2 in points_on_faces:
-            all_border_pts.extend([p1, p2])
-        all_border_pts.sort(key=get_perimeter_param)
+            if not points_on_faces:
+                return None, None
 
-        unique_border_pts = []
-        for pt in all_border_pts:
-            if not unique_border_pts or (
-                abs(unique_border_pts[-1].x() - pt.x()) > 0.1
-                or abs(unique_border_pts[-1].y() - pt.y()) > 0.1
-            ):
-                unique_border_pts.append(pt)
+            def get_perimeter_param(pt):
+                x, y = pt.x(), pt.y()
+                if abs(y - 0) < 0.1:       return x
+                elif abs(x - hight) < 0.1: return hight + y
+                elif abs(y - base) < 0.1:  return hight + base + (hight - x)
+                elif abs(x - 0) < 0.1:     return hight + base + hight + (base - y)
+                return 0
 
-        has_pith = (pith_z is not None and pith_z > 0) or (pith_y is not None and pith_y > 0)
+            all_border_pts = []
+            for _, p1, p2 in points_on_faces:
+                all_border_pts.extend([p1, p2])
+            all_border_pts.sort(key=get_perimeter_param)
 
-        if has_pith and pith_z is not None and pith_y is not None:
-            pith_point = QPointF(map_x(pith_z), map_y(pith_y))
+            unique_border_pts = []
+            for pt in all_border_pts:
+                if not unique_border_pts or (
+                    abs(unique_border_pts[-1].x() - pt.x()) > 0.1
+                    or abs(unique_border_pts[-1].y() - pt.y()) > 0.1
+                ):
+                    unique_border_pts.append(pt)
 
-            # Single polygon: pith → border points in perimeter order.
-            # Never draws internal lines, even at corners.
-            if len(unique_border_pts) >= 2:
-                poly = QPolygonF([pith_point] + unique_border_pts)
-                self.scene.addPolygon(poly, knot_pen, knot_brush)
+            pith_z = getattr(knot_obj, 'pith_z', None)
+            pith_y = getattr(knot_obj, 'pith_y', None)
+            has_pith = (pith_z is not None and pith_z > 0) or (pith_y is not None and pith_y > 0)
+            pith_point = None
+            if has_pith and pith_z is not None and pith_y is not None:
+                pith_point = QPointF(map_x(pith_z), map_y(pith_y))
 
-            # Draw the pith dot on top
-            pith_pen = QPen(Qt.red, 1)
-            pith_pen.setCosmetic(True)
-            pith_item = self.scene.addEllipse(-3, -3, 6, 6, pith_pen, QBrush(Qt.red))
-            pith_item.setPos(pith_point)
-            pith_item.setFlag(pith_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
-            pith_item.setZValue(10)
-        else:
-            if len(unique_border_pts) >= 3:
-                poly = QPolygonF(unique_border_pts)
-                self.scene.addPolygon(poly, knot_pen, knot_brush)
+            return unique_border_pts, pith_point
+
+        def draw_knot_shape(knot_obj, brush, pen, pith_pen, pith_brush, z_value,
+                            label=None, label_color=None):
+            """Draw a knot cross-section on the scene with the given styling."""
+            border_pts, pith_point = build_knot_shape(knot_obj)
+            if border_pts is None:
+                return
+
+            if pith_point is not None:
+                if len(border_pts) >= 2:
+                    poly = QPolygonF([pith_point] + border_pts)
+                    item = self.scene.addPolygon(poly, pen, brush)
+                    item.setZValue(z_value)
+                # Pith dot
+                pith_item = self.scene.addEllipse(-3, -3, 6, 6, pith_pen, pith_brush)
+                pith_item.setPos(pith_point)
+                pith_item.setFlag(pith_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
+                pith_item.setZValue(z_value + 1)
+            else:
+                if len(border_pts) >= 3:
+                    poly = QPolygonF(border_pts)
+                    item = self.scene.addPolygon(poly, pen, brush)
+                    item.setZValue(z_value)
+
+            # Knot number label — fixed pixel size so it's always legible at any zoom
+            if label and border_pts:
+                cx = sum(p.x() for p in border_pts) / len(border_pts)
+                cy = sum(p.y() for p in border_pts) / len(border_pts)
+                text_item = self.scene.addSimpleText(label)
+                if label_color:
+                    text_item.setBrush(QBrush(label_color))
+                font = QFont()
+                font.setPixelSize(12)
+                font.setBold(True)
+                text_item.setFont(font)
+                text_item.setFlag(text_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
+                text_item.setPos(cx, cy)
+                text_item.setZValue(z_value + 2)
+
+        # ── Neighboring knots (within ±150 mm along X) ───────────────────────
+        current_knot_no = vm._current_knot_no
+        try:
+            current_x = int(vm._x) if vm._x is not None else None
+        except (TypeError, ValueError):
+            current_x = None
+
+        neighbor_brush      = QBrush(QColor(139, 69, 19, 60))
+        neighbor_pen        = QPen(QColor(101, 67, 33, 130), 1.0)
+        neighbor_pen.setCosmetic(True)
+        neighbor_pith_pen   = QPen(QColor(200, 0, 0, 130), 1)
+        neighbor_pith_pen.setCosmetic(True)
+        neighbor_pith_brush = QBrush(QColor(255, 0, 0, 100))
+
+        if current_x is not None:
+            for knot in vm._knots:
+                if str(knot.knot_no) == str(current_knot_no):
+                    continue
+                try:
+                    kx = int(knot.x) if knot.x is not None else None
+                except (TypeError, ValueError):
+                    kx = None
+                if kx is not None and abs(kx - current_x) <= 150:
+                    draw_knot_shape(
+                        knot,
+                        brush=neighbor_brush,
+                        pen=neighbor_pen,
+                        pith_pen=neighbor_pith_pen,
+                        pith_brush=neighbor_pith_brush,
+                        z_value=1,
+                        label=f"#{knot.knot_no}",
+                        label_color=QColor(80, 40, 10, 180),
+                    )
+
+        # ── Selected knot (prominent, drawn on top) ────────────────────────
+        has_knot_data = any(z2 is not None for z2 in [
+            vm.side1_z2, vm.side2_z2, vm.side3_z2, vm.side4_z2
+        ])
+
+        if has_knot_data:
+            # Lightweight proxy to reuse draw_knot_shape with VM properties
+            class _KnotProxy:
+                pass
+            proxy = _KnotProxy()
+            proxy.side1_z1 = vm.side1_z1; proxy.side1_z2 = vm.side1_z2
+            proxy.side2_z1 = vm.side2_z1; proxy.side2_z2 = vm.side2_z2
+            proxy.side3_z1 = vm.side3_z1; proxy.side3_z2 = vm.side3_z2
+            proxy.side4_z1 = vm.side4_z1; proxy.side4_z2 = vm.side4_z2
+            proxy.pith_z   = vm.pith_z
+            proxy.pith_y   = vm.pith_y
+
+            selected_brush      = QBrush(QColor(139, 69, 19, 210))
+            selected_pen        = QPen(QColor(80, 40, 10), 2.0)
+            selected_pen.setCosmetic(True)
+            selected_pith_pen   = QPen(Qt.red, 1)
+            selected_pith_pen.setCosmetic(True)
+            selected_pith_brush = QBrush(Qt.red)
+
+            draw_knot_shape(
+                proxy,
+                brush=selected_brush,
+                pen=selected_pen,
+                pith_pen=selected_pith_pen,
+                pith_brush=selected_pith_brush,
+                z_value=5,
+                label=f"#{current_knot_no}",
+                label_color=QColor(40, 10, 0),
+            )
 
         # Forza il ridimensionamento della vista per farla fittare nello spazio a disposizione
         if self.scene.sceneRect().isValid():

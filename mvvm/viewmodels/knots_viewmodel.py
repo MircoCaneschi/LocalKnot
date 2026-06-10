@@ -505,6 +505,12 @@ class KnotsViewModel(QObject):
                 if z1 < 0:
                     if f'side{side}_z1' not in invalid_fields: invalid_fields.append(f'side{side}_z1')
                     error_msgs.append(f"Side {side_name}: z1 must be >= 0")
+
+                if z1 >= z2:
+                    if f'side{side}_z1' not in invalid_fields: invalid_fields.append(f'side{side}_z1')
+                    if f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
+                    error_msgs.append(f"Side {side_name}: z1 must be < z2 (got z1={z1}, z2={z2})")
+                    continue  # dmin and bounds checks depend on a valid interval, skip them
                 
                 if dmin <= 0:
                     if f'side{side}_dmin' not in invalid_fields: invalid_fields.append(f'side{side}_dmin')

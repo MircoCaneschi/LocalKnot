@@ -1,5 +1,5 @@
 QMainWindow {
-    background-color: #959acd;
+    background-color: #71a9f2;
 }
 QGroupBox {
     background-color: #4a4986;
