@@ -117,6 +117,9 @@ class KnotsViewModel(QObject):
             if self._x != val:
                 self._x = val
                 self._mark_dirty()
+                
+                if self._knot_editable:
+                    self._autofill_pith_coordinates()
         except (ValueError, TypeError):
             pass
 
@@ -799,9 +802,35 @@ class KnotsViewModel(QObject):
                 self._side4_dmin = knot.side4_dmin
                 return True
             return False
-        except:
+        except Exception:
             return False
 
+    def _autofill_pith_coordinates(self):
+        """Auto-fill pith_z and pith_y based on nearest knot within +-150mm."""
+        if not self._knots:
+            return
+
+        closest_knot = None
+        min_dist = float('inf')
+
+        for k in self._knots:
+            if k.pith_z is None or k.pith_y is None:
+                continue
+                
+            dist = abs(k.x - self._x)
+            if dist <= 150:
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_knot = k
+
+        if closest_knot:
+            self._pith_z = closest_knot.pith_z
+            self._pith_y = closest_knot.pith_y
+        else:
+            self._pith_z = None
+            self._pith_y = None
+            
+        self.knot_data_changed.emit()
     def _validate_knot_data(self) -> tuple:
         """Validate current knot data."""
         if not self._current_knot_no:

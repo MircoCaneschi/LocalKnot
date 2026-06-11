@@ -331,10 +331,18 @@ class KnotsView:
         self.pruned_knot.blockSignals(True)
         self.hidden_pruned_knot.blockSignals(True)
 
-        self.x_line.setText(str(self.view_model.x))
-        self.comment_line.setText(self.view_model.comment)
+        x_str = str(self.view_model.x)
+        if self.x_line.text() != x_str:
+            self.x_line.setText(x_str)
+            
+        if self.comment_line.text() != self.view_model.comment:
+            self.comment_line.setText(self.view_model.comment)
+            
         self.pruned_knot.setChecked(self.view_model.is_pruned_knot)
-        self.hidden_x_line.setText(str(self.view_model.x))
+        
+        if self.hidden_x_line.text() != x_str:
+            self.hidden_x_line.setText(x_str)
+            
         self.hidden_pruned_knot.setChecked(self.view_model.is_pruned_knot)
         
         is_pruned = self.view_model.is_pruned_knot
@@ -353,10 +361,18 @@ class KnotsView:
             z_val = self.view_model.pith_z
             y_val = self.view_model.pith_y
 
-        self.pith_z_line.setText("" if z_val is None else str(z_val))
-        self.pith_y_line.setText("" if y_val is None else str(y_val))
-        self.hidden_pith_z_line.setText("" if z_val is None else str(z_val))
-        self.hidden_pith_y_line.setText("" if y_val is None else str(y_val))
+        z_str = "" if z_val is None else str(z_val)
+        y_str = "" if y_val is None else str(y_val)
+        
+        if self.pith_z_line.text() != z_str:
+            self.pith_z_line.setText(z_str)
+        if self.pith_y_line.text() != y_str:
+            self.pith_y_line.setText(y_str)
+            
+        if self.hidden_pith_z_line.text() != z_str:
+            self.hidden_pith_z_line.setText(z_str)
+        if self.hidden_pith_y_line.text() != y_str:
+            self.hidden_pith_y_line.setText(y_str)
         
         if getattr(self, '_last_pruned_state', None) is not None and self._last_pruned_state != is_pruned:
             self._last_pruned_state = is_pruned
