@@ -244,7 +244,7 @@ class KnotResultsView(QWidget):
 
     def bind_view_model(self):
         # Connect the view_model signal to update the labels
-        # self.view_model.results_updated.connect(self._update_results)
+        self.view_model.results_updated.connect(self._update_results)
         pass
         
     def _update_results(self, results_dict):

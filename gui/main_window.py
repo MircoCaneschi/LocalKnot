@@ -144,11 +144,35 @@ class MainWindow(QMainWindow):
         self.knots_vm.knots_changed.connect(self.virtual_board_view._redraw_board)
         self.projects_vm.projects_changed.connect(self.virtual_board_view._redraw_board)
 
+        # Trigger knot parameter recalculation
+        self.boards_vm.board_saved.connect(self._update_knot_results)
+        self.boards_vm.boards_changed.connect(self._update_knot_results)
+        self.boards_vm.current_board_changed.connect(self._update_knot_results)
+        
+        self.knots_vm.knot_saved.connect(self._update_knot_results)
+        self.knots_vm.knots_changed.connect(self._update_knot_results)
+        self.knots_vm.current_knot_changed.connect(self._update_knot_results)
+        
+        self.projects_vm.projects_changed.connect(self._update_knot_results)
+        self.projects_vm.current_project_changed.connect(self._update_knot_results)
+
         # Trigger initial data load now that UI is fully initialized
         self.knots_vm.handle_project_changed(self.projects_vm.current_project)
         self.boards_vm.handle_project_changed(self.projects_vm.current_project)
 
         self.showMaximized()
+
+    def _update_knot_results(self, *args, **kwargs):
+        """Fetches the current state and triggers a recalculation of the parameters."""
+        board_no = self.boards_vm.current_board_no
+        board = next((b for b in self.boards_vm._boards if str(b.board_no) == board_no), None)
+        
+        knot_no = self.knots_vm.current_knot_no
+        current_knot = next((k for k in self.knots_vm._knots if str(k.knot_no) == knot_no), None)
+        
+        knots = self.knots_vm._knots
+
+        self.virtual_board_vm.update_results(board, knots, current_knot)
 
 
     def _toggle_data_panel(self):
