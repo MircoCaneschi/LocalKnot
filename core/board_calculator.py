@@ -19,30 +19,34 @@ class BoardCalculator:
         if not board or not current_knot or not knots:
             return self._empty_results()
 
+        # Convert knots to the standard coordinate system for formulas
+        standard_knots = [self._to_standard_knot(k, board) for k in knots]
+        current_knot_std = self._to_standard_knot(current_knot, board)
+
         # Build polygons for all knots
         polygons = {}
-        for knot in knots:
+        for knot in standard_knots:
             polygons[knot.knot_no] = self._create_polygon(knot, board)
 
         # Filter knots in interval (-150 to +150 mm)
-        interval_knots = [k for k in knots if abs(k.x - current_knot.x) <= 150]
+        interval_knots = [k for k in standard_knots if abs(k.x - current_knot_std.x) <= 150]
         
         # Calculate individual parameters
         res = {}
-        res["tKnot"] = self._tKnot(current_knot, board, polygons)
-        res["mKnot"] = self._mKnot(current_knot, board, polygons)
-        res["tKAR"] = self._tKAR(current_knot, board, interval_knots, polygons)
+        res["tKnot"] = self._tKnot(current_knot_std, board, polygons)
+        res["mKnot"] = self._mKnot(current_knot_std, board, polygons)
+        res["tKAR"] = self._tKAR(current_knot_std, board, interval_knots, polygons)
         
-        mkar_l = self._mKAR_Left(current_knot, board, interval_knots, polygons)
+        mkar_l = self._mKAR_Left(current_knot_std, board, interval_knots, polygons)
         res["mKAR_L"] = mkar_l
-        mkar_r = self._mKAR_Right(current_knot, board, interval_knots, polygons)
+        mkar_r = self._mKAR_Right(current_knot_std, board, interval_knots, polygons)
         res["mKAR_R"] = mkar_r
         res["mKAR"] = max(mkar_l, mkar_r) if mkar_l is not None and mkar_r is not None else 0.0
 
-        res["DEB"] = self._DEB(current_knot, board)
-        res["DAB"] = self._DAB(current_knot, board, interval_knots)
-        res["DEK"] = self._DEK(current_knot, board)
-        res["EEB"] = abs(self._EEB(current_knot, board))
+        res["DEB"] = self._DEB(current_knot_std, board)
+        res["DAB"] = self._DAB(current_knot_std, board, interval_knots)
+        res["DEK"] = self._DEK(current_knot_std, board)
+        res["EEB"] = abs(self._EEB(current_knot_std, board))
         res["EAB"] = self._EAB(board, interval_knots)
 
         # Formatting values to strings with 3 decimals
@@ -60,6 +64,51 @@ class BoardCalculator:
 
     def _val(self, v):
         return v if v is not None else -1
+
+    def _to_standard_knot(self, knot, board):
+        """
+        Converts a knot from the LocalKnot coordinate system to the 'standard' one 
+        used by the mathematical formulas:
+        - Side 3 and 4 remain unchanged.
+        - Side 1 (top): z originates from the right side instead of left (z1 = height - z2).
+        - Side 2 (right): z originates from the top side instead of bottom (z1 = base - z2).
+        """
+        class _StdKnot: pass
+        std_k = _StdKnot()
+        std_k.knot_no = knot.knot_no
+        std_k.x = knot.x
+        std_k.pith_z = getattr(knot, 'pith_z', None)
+        std_k.pith_y = getattr(knot, 'pith_y', None)
+        std_k.is_pruned_knot = getattr(knot, 'is_pruned_knot', False)
+        std_k.pruned_z = getattr(knot, 'pruned_z', None)
+        std_k.pruned_y = getattr(knot, 'pruned_y', None)
+        
+        std_k.side1_dmin = knot.side1_dmin
+        std_k.side2_dmin = knot.side2_dmin
+        std_k.side3_z1 = knot.side3_z1
+        std_k.side3_z2 = knot.side3_z2
+        std_k.side3_dmin = knot.side3_dmin
+        std_k.side4_z1 = knot.side4_z1
+        std_k.side4_z2 = knot.side4_z2
+        std_k.side4_dmin = knot.side4_dmin
+        
+        # Side 1 conversion
+        if knot.side1_z1 is not None and knot.side1_z2 is not None:
+            std_k.side1_z1 = board.height - knot.side1_z2
+            std_k.side1_z2 = board.height - knot.side1_z1
+        else:
+            std_k.side1_z1 = knot.side1_z1
+            std_k.side1_z2 = knot.side1_z2
+            
+        # Side 2 conversion
+        if knot.side2_z1 is not None and knot.side2_z2 is not None:
+            std_k.side2_z1 = board.base - knot.side2_z2
+            std_k.side2_z2 = board.base - knot.side2_z1
+        else:
+            std_k.side2_z1 = knot.side2_z1
+            std_k.side2_z2 = knot.side2_z2
+            
+        return std_k
 
     def _create_polygon(self, knot, board):
         poly = QPolygon()
