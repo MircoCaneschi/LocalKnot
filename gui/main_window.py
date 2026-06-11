@@ -98,6 +98,7 @@ class MainWindow(QMainWindow):
         self.projects_vm.current_project_changed.connect(self.boards_vm.handle_project_changed)
         
         self.boards_vm.current_board_changed.connect(self.knots_vm.handle_board_changed)
+        self.boards_vm.board_saved.connect(lambda msg: self.knots_vm.reload_knots())
 
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()

@@ -422,6 +422,25 @@ class KnotsViewModel(QObject):
             self.knot_error.emit(f"Failed to load knots: {str(e)}")
 
     @Slot()
+    def reload_knots(self):
+        """Reload knots for the current board without losing current selection."""
+        if not self._current_board or not self._current_project:
+            return
+            
+        try:
+            self._knots = self.repo.get_all_knots(self._current_board, self._current_project)
+            self.knots_changed.emit(self.knot_list)
+            
+            # Reload currently selected knot data
+            if self._current_knot_no:
+                # We save it because handle_knot_selected might otherwise think it's the same and skip
+                knot_to_load = self._current_knot_no
+                self._current_knot_no = ""
+                self.handle_knot_selected(knot_to_load)
+        except Exception as e:
+            self.knot_error.emit(f"Failed to reload knots: {str(e)}")
+
+    @Slot()
     def handle_new_knot(self):
         """Prepare UI for new knot creation with auto-assigned ID."""
         self.hide_messages.emit()

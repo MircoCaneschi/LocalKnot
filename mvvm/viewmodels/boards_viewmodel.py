@@ -315,13 +315,56 @@ class BoardsViewModel(QObject):
                     self.handle_board_selected(self._current_board_no)
             else:
                 # Modifying an existing board
+                old_board = self.repo.get_board_by_id(board_text, self._current_project)
+                old_height = old_board.height if old_board else 0
+                old_base = old_board.base if old_board else 0
+
                 if self.repo.update_board(board, self._current_project):
                     # Update local list
                     for idx, b in enumerate(self._boards):
                         if str(b.board_no) == board_text:
                             self._boards[idx] = board
                             break
-                    self.board_saved.emit(f"Board {self._current_board_no} updated!")
+                            
+                    # Update corner knots if dimensions increased
+                    updated_knots = False
+                    if old_board and self.knot_repo:
+                        new_height = board.height
+                        new_base = board.base
+                        
+                        knots = self.knot_repo.get_all_knots(board_text, self._current_project)
+                        for k in knots:
+                            changed = False
+                            
+                            # Top-Left (Side 1 and Side 4)
+                            if k.side1_z2 == old_height and k.side4_z1 == 0 and new_height > old_height:
+                                k.side1_z2 = new_height
+                                changed = True
+                                
+                            # Bottom-Left (Side 4 and Side 3)
+                            if k.side4_z2 == old_base and k.side3_z1 == 0 and new_base > old_base:
+                                k.side4_z2 = new_base
+                                changed = True
+                                
+                            # Bottom-Right (Side 3 and Side 2)
+                            if k.side3_z2 == old_height and k.side2_z1 == 0 and new_height > old_height:
+                                k.side3_z2 = new_height
+                                changed = True
+                                
+                            # Top-Right (Side 2 and Side 1)
+                            if k.side2_z2 == old_base and k.side1_z1 == 0 and new_base > old_base:
+                                k.side2_z2 = new_base
+                                changed = True
+                                
+                            if changed:
+                                self.knot_repo.update_knot(k, board_text, self._current_project)
+                                updated_knots = True
+
+                    if updated_knots:
+                        self.board_saved.emit(f"Board {self._current_board_no} saved! (corner knots updated)")
+                    else:
+                        self.board_saved.emit(f"Board {self._current_board_no} updated!")
+                        
                     self.save_enabled_changed.emit(False)
                     
         except LocalKnotError as e:
