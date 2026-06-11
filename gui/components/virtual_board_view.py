@@ -259,6 +259,34 @@ class VirtualBoardView(QWidget):
         # Side 4 – left edge (x=0), arrow points down
         _draw_arrow(-_gap, 0, -_gap, _al)
 
+        # ── Side Numbers (1, 2, 3, 4) ─────────────────────────────────────────
+        _num_gap = min(hight, base) * 0.09
+        
+        def _draw_side_number(cx, cy, text):
+            r = min(hight, base) * 0.055
+            pen = QPen(QColor(50, 50, 50), 1.5)
+            pen.setCosmetic(True)
+            circle = self.scene.addEllipse(cx - r, cy - r, 2 * r, 2 * r, pen, QBrush(QColor(245, 245, 245)))
+            circle.setZValue(8)
+            
+            lbl = self.scene.addSimpleText(text)
+            font = QFont("Arial", 100)
+            font.setBold(True)
+            lbl.setFont(font)
+            lbl.setBrush(QBrush(QColor(30, 30, 30)))
+            lbl.setZValue(9)
+            
+            br = lbl.boundingRect()
+            target_h = r * 1.45
+            scale = target_h / br.height() if br.height() > 0 else 1
+            lbl.setScale(scale)
+            lbl.setPos(cx - (br.width() * scale) / 2, cy - (br.height() * scale) / 2)
+
+        _draw_side_number(hight / 2, -_num_gap, "1")
+        _draw_side_number(hight + _num_gap, base / 2, "2")
+        _draw_side_number(hight / 2, base + _num_gap, "3")
+        _draw_side_number(-_num_gap, base / 2, "4")
+
         # ── Pith coordinate system indicator ──────────────────────────────────
         # Two red arrows anchored at the bottom-right corner of the board:
         #   horizontal (← left)  → pith_z is measured from the right edge
