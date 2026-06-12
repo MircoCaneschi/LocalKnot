@@ -28,6 +28,7 @@ class MainWindow(QMainWindow):
         self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         
         central_widget = QWidget()
+        central_widget.setMinimumSize(1000, 700)
         self.scroll_area.setWidget(central_widget)
         self.setCentralWidget(self.scroll_area)
 
