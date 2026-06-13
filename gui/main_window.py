@@ -15,6 +15,8 @@ from core.board_calculator import BoardCalculator
 from mvvm.viewmodels.virtual_board_vm import VirtualBoardViewModel
 from gui.components.virtual_board_view import VirtualBoardView
 from gui.components.knot_results_view import KnotResultsView
+from core.export_manager import ExportManager
+from PySide6.QtWidgets import QFileDialog
 
 class MainWindow(QMainWindow):
     """Main application window with MVVM architecture."""
@@ -23,12 +25,13 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("LocalKnot - MVVM Architecture")
 
+        self.resize(1000, 700)
+        
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         
         central_widget = QWidget()
-        central_widget.setMinimumSize(1000, 700)
         self.scroll_area.setWidget(central_widget)
         self.setCentralWidget(self.scroll_area)
 
@@ -89,6 +92,7 @@ class MainWindow(QMainWindow):
 
         # Connect signals for cross-viewModel communication and UI updates
         self.projects_vm.projects_changed.connect(self._update_project_counter)
+        self.projects_vm.export_requested.connect(self._handle_export)
         self.boards_vm.boards_changed.connect(self._update_board_counter)
         self.knots_vm.knots_changed.connect(self._update_knot_counter)
         
@@ -136,7 +140,8 @@ class MainWindow(QMainWindow):
         self.main_layout.addWidget(self.knot_results_view)
         
         self.virtual_board_view = VirtualBoardView(self.virtual_board_vm, self.knots_vm)
-        self.main_layout.addWidget(self.virtual_board_view)
+        self.virtual_board_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.main_layout.addWidget(self.virtual_board_view, stretch=1)
 
         # Redraw the virtual board when board/knot/project data changes or is saved/deleted
         self.boards_vm.board_saved.connect(self.virtual_board_view._redraw_board)
@@ -176,6 +181,52 @@ class MainWindow(QMainWindow):
 
         self.virtual_board_vm.update_results(board, knots, current_knot)
 
+    def _handle_export(self):
+        """Handle the export request by validating state and opening file dialog."""
+        # Validate that we are not in editing mode anywhere by checking if save buttons are enabled
+        is_project_editing = self.projects_view.save_btn.isEnabled()
+        is_board_editing = self.boards_view.save_btn.isEnabled()
+        is_knot_editing = self.knots_view.save_btn.isEnabled()
+
+        # If knot is editing but there are no knots and fields are default, ignore it (forced new mode)
+        if is_knot_editing and not self.knots_vm._knots:
+            if (self.knots_vm.x == 0 and 
+                self.knots_vm.pith_z is None and 
+                self.knots_vm.pith_y is None and 
+                self.knots_vm.comment == "" and 
+                not self.knots_vm.is_pruned_knot):
+                is_knot_editing = False
+
+        if is_project_editing or is_board_editing or is_knot_editing:
+            self.projects_vm.export_error.emit("Cannot export. Please save all changes first.")
+            return
+
+        project_id = self.projects_vm.current_project
+        if not project_id:
+            self.projects_vm.export_error.emit("No project selected to export.")
+            return
+
+        # Open file dialog
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Project Data",
+            f"{project_id}_export.txt",
+            "Text Files (*.txt);;All Files (*)"
+        )
+
+        if not file_path:
+            return  # User cancelled
+
+        # Perform the export
+        try:
+            exporter = ExportManager(self.board_repo, self.knot_repo)
+            success = exporter.export_project(project_id, file_path)
+            if success:
+                self.projects_vm.export_success.emit("Project exported successfully!")
+            else:
+                self.projects_vm.export_error.emit("Export failed.")
+        except Exception as e:
+            self.projects_vm.export_error.emit(f"Export Error: {str(e)}")
 
     def _toggle_data_panel(self):
         """Manages the visibility of the top data panel with a smooth animation."""

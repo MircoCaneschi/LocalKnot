@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget
 )
 from PySide6.QtCore import Qt, QObject, QEvent
+# pyrefly: ignore [missing-import]
 from pyside6helpers import icons
 
 from gui.components.common_widgets import create_shift_buttons
@@ -111,6 +112,10 @@ class ProjectsView:
         # Message labels
         self.project_msg = None
         self.species_msg = None
+        
+        # Export components
+        self.export_btn = None
+        self.export_msg = None
 
         # Hidden panel components
         self.hidden_combo_box_projects = None
@@ -250,10 +255,22 @@ class ProjectsView:
         form.addRow("", self.project_msg)
         form.addRow("Species", species_layout)
         form.addRow("", self.species_msg)
+        
+        # Export Layout
+        export_layout = QHBoxLayout()
+        self.export_btn = QPushButton("Export Data")
+        self.export_btn.setIcon(icons.download())
+        self.export_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.export_msg = QLabel()
+        self.export_msg.hide()
+        export_layout.addWidget(self.export_btn)
+        export_layout.addWidget(self.export_msg)
+        export_layout.addStretch()
 
         self.main_layout = QVBoxLayout()
         self.main_layout.addLayout(new_del_layout)
         self.main_layout.addLayout(form)
+        self.main_layout.addLayout(export_layout)
 
     def _setup_hidden_layout(self):
         """
@@ -309,12 +326,14 @@ class ProjectsView:
         for btn in [self.new_btn, self.change_name_btn, self.delete_btn, 
                     self.add_species_btn, self.modify_species_btn, self.delete_species_btn,
                     self.right_shift_btn, self.left_shift_btn,
-                    self.hidden_right_shift_btn, self.hidden_left_shift_btn]:
+                    self.hidden_right_shift_btn, self.hidden_left_shift_btn,
+                    self.export_btn]:
             btn.clicked.connect(self._hide_messages)
 
         # Button clicks → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_project)
         self.save_btn.clicked.connect(self.view_model.handle_save_project)
+        self.export_btn.clicked.connect(self.view_model.handle_export_project)
         
         # Species management clicks
         self.add_species_btn.clicked.connect(self.view_model.handle_add_species)
@@ -361,6 +380,8 @@ class ProjectsView:
         self.view_model.project_modify_mode.connect(self._on_project_modify_mode)
         self.view_model.project_error.connect(self._on_project_error)
         self.view_model.project_saved.connect(self._on_project_saved)
+        self.view_model.export_error.connect(self._on_export_error)
+        self.view_model.export_success.connect(self._on_export_success)
         
         # Sync Species List (Main and Hidden)
         self.view_model.species_changed.connect(self._on_species_changed)
@@ -418,6 +439,7 @@ class ProjectsView:
         """Hide all messages in this view."""
         self.project_msg.hide()
         self.species_msg.hide()
+        self.export_msg.hide()
 
     def _on_projects_changed(self, projects: list):
         """Intelligently updates main combo box without clearing if possible."""
@@ -486,6 +508,22 @@ class ProjectsView:
         """
         self.project_msg.setText(error_message)
         self.project_msg.show()
+
+    def _on_export_error(self, error_message: str):
+        """
+        Slot called when ViewModel emits export_error signal.
+        Displays error message to user next to export button.
+        """
+        self.export_msg.setText(error_message)
+        self.export_msg.show()
+
+    def _on_export_success(self, message: str):
+        """
+        Slot called when ViewModel emits export_success signal.
+        Displays success message to user next to export button.
+        """
+        self.export_msg.setText(message)
+        self.export_msg.show()
 
     def _on_species_error(self, error_message: str):
         """

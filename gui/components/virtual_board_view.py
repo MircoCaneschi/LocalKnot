@@ -114,6 +114,15 @@ class VirtualBoardView(QWidget):
         grid_layout.addWidget(right_widget, 1, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         grid_layout.addWidget(bottom_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
+        # Set stretches to ensure the graphics view gets all available extra space
+        grid_layout.setRowStretch(0, 0)
+        grid_layout.setRowStretch(1, 1)
+        grid_layout.setRowStretch(2, 0)
+        
+        grid_layout.setColumnStretch(0, 0)
+        grid_layout.setColumnStretch(1, 1)
+        grid_layout.setColumnStretch(2, 0)
+
         # Error Message Label (Prominent Banner at the top)
         self.error_msg = QLabel()
         self.error_msg.setStyleSheet(

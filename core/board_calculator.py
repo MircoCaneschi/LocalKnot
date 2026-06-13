@@ -49,18 +49,22 @@ class BoardCalculator:
         res["EEB"] = abs(self._EEB(current_knot_std, board))
         res["EAB"] = self._EAB(board, interval_knots)
 
-        # Formatting values to strings with 3 decimals
+        # Formatting values to strings with 2 decimals
         for k, v in res.items():
             if v is not None:
-                res[k] = f"{v:.3f}"
+                res[k] = f"{v:.2f}"
             else:
                 res[k] = "N/A"
+
+        res["SplayKnot"] = "1" if self._SplayKnot(current_knot_std, board) else "0"
 
         return res
 
     def _empty_results(self):
         keys = ["tKnot", "mKnot", "tKAR", "mKAR_L", "mKAR_R", "mKAR", "DEB", "DAB", "DEK", "EEB", "EAB"]
-        return {k: "0.000" for k in keys}
+        empty_res = {k: "0.00" for k in keys}
+        empty_res["SplayKnot"] = "0"
+        return empty_res
 
     def _val(self, v):
         return v if v is not None else -1
@@ -314,6 +318,15 @@ class BoardCalculator:
             l_y1, l_y2 = self._val(knot.side4_z1), self._val(knot.side4_z2)
             deb = ((t_z2 - t_z1) + (l_y2 - l_y1)) / (2 * board.height)
             if val_sk < deb:
+                return True
+        return False
+
+    def _SplayKnot(self, current_knot, board):
+        if self._isArrisKnotTopRight(current_knot, board):
+            if self._isSplayKnotUpperRightBetter(current_knot, board):
+                return True
+        elif self._isArrisKnotTopLeft(current_knot, board):
+            if self._isSplayKnotUpperLeftBetter(current_knot, board):
                 return True
         return False
 

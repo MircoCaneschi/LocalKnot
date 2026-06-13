@@ -78,6 +78,15 @@ class ProjectsViewModel(QObject):
     # Emitted to enable or disable navigation buttons (New, Modify, Delete)
     navigation_enabled_changed = Signal(bool)
 
+    # Emitted when export is requested by the user
+    export_requested = Signal()
+
+    # Emitted when an export error occurs
+    export_error = Signal(str)
+    
+    # Emitted when an export succeeds
+    export_success = Signal(str)
+
     # ==================== CONSTRUCTOR ====================
 
     def __init__(self, repository: ProjectRepository):
@@ -579,6 +588,19 @@ class ProjectsViewModel(QObject):
         if current_index >= 0 and current_index < len(self._projects) - 1:
             new_project = self._projects[current_index + 1]
             self.current_project = new_project.name
+
+    @Slot()
+    def handle_export_project(self):
+        """
+        Slot called when user clicks 'Export' button.
+        Emits export_requested to be handled by the MainWindow where
+        we can check the status of boards and knots viewmodels.
+        """
+        if not self._current_project:
+            self.export_error.emit("No project selected to export.")
+            return
+        
+        self.export_requested.emit()
 
     # ==================== PRIVATE METHODS ====================
 
