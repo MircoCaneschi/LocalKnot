@@ -630,6 +630,14 @@
    'C:\\Users\\mirco\\OneDrive\\Desktop\\UNI\\stage\\codice '
    'progetto\\LocalKnot\\imgs\\Blu.png',
    'DATA'),
+  ('imgs\\arrow_down.svg',
+   'C:\\Users\\mirco\\OneDrive\\Desktop\\UNI\\stage\\codice '
+   'progetto\\LocalKnot\\imgs\\arrow_down.svg',
+   'DATA'),
+  ('imgs\\arrow_up.svg',
+   'C:\\Users\\mirco\\OneDrive\\Desktop\\UNI\\stage\\codice '
+   'progetto\\LocalKnot\\imgs\\arrow_up.svg',
+   'DATA'),
   ('imgs\\logo_DEMO.ico',
    'C:\\Users\\mirco\\OneDrive\\Desktop\\UNI\\stage\\codice '
    'progetto\\LocalKnot\\imgs\\logo_DEMO.ico',

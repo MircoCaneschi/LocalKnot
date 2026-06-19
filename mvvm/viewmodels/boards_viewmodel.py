@@ -73,69 +73,81 @@ class BoardsViewModel(QObject):
             if not self._board_editable:
                 self.handle_board_selected(value)
 
-    @Property(int)
-    def height(self) -> int:
+    @Property(object)
+    def height(self):
         """Get the height value."""
         return self._height
 
     @height.setter
-    def height(self, value: int):
+    def height(self, value):
         """Set the height value."""
-        try:
-            val = int(value)
-            if self._height != val:
-                self._height = val
-                self._mark_dirty()
-        except (ValueError, TypeError):
-            pass
+        if not value and value != 0:
+            val = None
+        else:
+            try:
+                val = int(value)
+            except (ValueError, TypeError):
+                return
+        if self._height != val:
+            self._height = val
+            self._mark_dirty()
 
-    @Property(int)
-    def base(self) -> int:
+    @Property(object)
+    def base(self):
         """Get the base value."""
         return self._base
 
     @base.setter
-    def base(self, value: int):
+    def base(self, value):
         """Set the base value."""
-        try:
-            val = int(value)
-            if self._base != val:
-                self._base = val
-                self._mark_dirty()
-        except (ValueError, TypeError):
-            pass
+        if not value and value != 0:
+            val = None
+        else:
+            try:
+                val = int(value)
+            except (ValueError, TypeError):
+                return
+        if self._base != val:
+            self._base = val
+            self._mark_dirty()
 
-    @Property(float)
-    def length(self) -> float:
+    @Property(object)
+    def length(self):
         """Get the length value."""
         return self._length
 
     @length.setter
-    def length(self, value: float):
+    def length(self, value):
         """Set the length value."""
-        try:
-            val = float(value)
-            if self._length != val:
-                self._length = val
-                self._mark_dirty()
-        except (ValueError, TypeError):
-            pass
+        if not value and value != 0:
+            val = None
+        else:
+            try:
+                val = float(value)
+            except (ValueError, TypeError):
+                return
+        if self._length != val:
+            self._length = val
+            self._mark_dirty()
 
-    @Property(int)
-    def test_position(self) -> int:
+    @Property(object)
+    def test_position(self):
         """Get the test position reference."""
         return self._test_position
 
     @test_position.setter
-    def test_position(self, value: int):
+    def test_position(self, value):
         """Set the test position reference."""
-        try:
-            val = int(value)
-            if self._test_position != val:
-                self._test_position = val
-                self._mark_dirty()
-        except (ValueError, TypeError):
-            pass
+        if not value and value != 0:
+            val = None
+        else:
+            try:
+                val = int(value)
+            except (ValueError, TypeError):
+                return
+        if self._test_position != val:
+            self._test_position = val
+            self._mark_dirty()
 
     @Property(str)
     def comment(self) -> str:
@@ -173,7 +185,9 @@ class BoardsViewModel(QObject):
             if self._boards:
                 self.current_board_no = str(self._boards[0].board_no)
             else:
-                self.handle_new_board()
+                self._current_board_no = ""
+                self._clear_fields()
+                self.current_board_changed.emit("")
         except LocalKnotError as e:
             self.board_error.emit(str(e))
         except Exception as e:
@@ -187,10 +201,14 @@ class BoardsViewModel(QObject):
         self.board_editable_changed.emit(True)
         
         self.current_board_no = ""
-        self._height = 0
-        self._base = 0
-        self._length = 0.0
-        self._test_position = 0
+        self._clear_fields()
+
+    def _clear_fields(self):
+        """Helper to reset all data fields to default."""
+        self._height = None
+        self._base = None
+        self._length = None
+        self._test_position = None
         self._comment = ""
         self.board_data_changed.emit()
 
@@ -217,12 +235,12 @@ class BoardsViewModel(QObject):
         # Check > 0 condition for new boards
         if self._board_editable:
             invalid_fields = []
-            if self._height <= 0: invalid_fields.append("Height")
-            if self._base <= 0: invalid_fields.append("Base")
-            if self._length <= 0: invalid_fields.append("Length")
+            if self._height is None or self._height <= 0: invalid_fields.append("Height")
+            if self._base is None or self._base <= 0: invalid_fields.append("Base")
+            if self._length is None or self._length <= 0: invalid_fields.append("Length")
             
             if invalid_fields:
-                self.board_error.emit(f"Fields {', '.join(invalid_fields)} must be greater than 0.")
+                self.board_error.emit(f"Fields {', '.join(invalid_fields)} must be filled and greater than 0.")
                 self.validation_failed.emit(invalid_fields)
                 return
 
@@ -393,7 +411,9 @@ class BoardsViewModel(QObject):
                 if self._boards:
                     self.current_board_no = str(self._boards[0].board_no)
                 else:
-                    self.handle_new_board()
+                    self._current_board_no = ""
+                    self._clear_fields()
+                    self.current_board_changed.emit("")
         except LocalKnotError as e:
             self.board_error.emit(str(e))
         except Exception as e:
@@ -403,7 +423,8 @@ class BoardsViewModel(QObject):
     def handle_board_selected(self, board_no: str):
         """Load board data when selected."""
         if not board_no:
-            self.handle_new_board()
+            self._current_board_no = ""
+            self._clear_fields()
             return
 
         if not self._current_project:

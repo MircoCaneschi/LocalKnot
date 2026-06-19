@@ -299,6 +299,11 @@ class BoardsView:
         self.board_no_combo.blockSignals(False)
         self.hidden_board_no_combo.blockSignals(False)
 
+        # Disable "New" button if no project is selected or if currently editing
+        has_project = bool(self.view_model._current_project)
+        is_editable = self.view_model._board_editable
+        self.new_btn.setEnabled(has_project and not is_editable)
+
     def _on_board_data_changed(self):
         """Update UI when ViewModel board data changes."""
         line_edits = [
@@ -311,19 +316,20 @@ class BoardsView:
             if le: le.blockSignals(True)
             
         def format_float(val: float) -> str:
+            if val is None: return ""
             s = f"{val:.2f}".rstrip('0').rstrip('.')
             return s if s else "0"
             
-        self.height_line.setText(str(self.view_model.height))
-        self.base_line.setText(str(self.view_model.base))
+        self.height_line.setText(str(self.view_model.height) if self.view_model.height is not None else "")
+        self.base_line.setText(str(self.view_model.base) if self.view_model.base is not None else "")
         self.length_line.setText(format_float(self.view_model.length))
-        self.testpos_line.setText(str(self.view_model.test_position))
-        self.comment_line.setText(str(self.view_model.comment))
+        self.testpos_line.setText(str(self.view_model.test_position) if self.view_model.test_position is not None else "")
+        self.comment_line.setText(str(self.view_model.comment) if self.view_model.comment is not None else "")
         
         if self.hidden_height_line:
-            self.hidden_height_line.setText(str(self.view_model.height))
+            self.hidden_height_line.setText(str(self.view_model.height) if self.view_model.height is not None else "")
         if self.hidden_base_line:
-            self.hidden_base_line.setText(str(self.view_model.base))
+            self.hidden_base_line.setText(str(self.view_model.base) if self.view_model.base is not None else "")
         if self.hidden_length_line:
             self.hidden_length_line.setText(format_float(self.view_model.length))
             
@@ -364,6 +370,21 @@ class BoardsView:
         self.hidden_board_no_combo.setCurrentText(text)
         self.board_no_combo.blockSignals(False)
         self.hidden_board_no_combo.blockSignals(False)
+        
+        # Restart any hidden animations
+        self._on_validation_failed([])
+
+        # Enable/Disable input fields depending on if there is an active board
+        has_board = bool(text)
+        for widget in [self.height_line, self.base_line, self.length_line, 
+                       self.testpos_line, self.comment_line,
+                       self.hidden_height_line, self.hidden_base_line, self.hidden_length_line]:
+            if widget:
+                widget.setEnabled(has_board)
+                
+        # Force save button disabled if no board is selected
+        if not has_board:
+            self.save_btn.setEnabled(False)
 
     def _on_validation_failed(self, invalid_fields: list):
         """Flash the labels of the invalid fields."""
@@ -405,6 +426,9 @@ class BoardsView:
         if state:
             self.board_no_combo.setValidator(QIntValidator(1, 999999))
             self.hidden_board_no_combo.setValidator(QIntValidator(1, 999999))
+            self.board_no_combo.setFocus()
+            if self.board_no_combo.lineEdit():
+                self.board_no_combo.lineEdit().selectAll()
         
         if not state:
             self.board_no_combo.setCurrentText(self.view_model.current_board_no)
@@ -415,6 +439,9 @@ class BoardsView:
         
         self.save_btn.setEnabled(state)
         self.delete_btn.setEnabled(not state)
+        
+        has_project = bool(self.view_model._current_project)
+        self.new_btn.setEnabled(has_project and not state)
         
         self.left_shift_btn.setEnabled(not state)
         self.right_shift_btn.setEnabled(not state)

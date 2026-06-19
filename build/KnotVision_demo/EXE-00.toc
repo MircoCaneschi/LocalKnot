@@ -85,7 +85,7 @@
  [],
  False,
  False,
- 1781787379,
+ 1781871849,
  [('runw.exe',
    'C:\\Users\\mirco\\OneDrive\\Desktop\\UNI\\stage\\codice '
    'progetto\\LocalKnot\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',

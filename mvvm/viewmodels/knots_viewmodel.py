@@ -104,24 +104,27 @@ class KnotsViewModel(QObject):
         if not self._knot_editable and self._current_knot_no:
             self.save_enabled_changed.emit(True)
 
-    @Property(int)
-    def x(self) -> int:
+    @Property(object)
+    def x(self):
         """Get the X coordinate."""
         return self._x
 
     @x.setter
-    def x(self, value: int):
+    def x(self, value):
         """Set the X coordinate."""
-        try:
-            val = int(value)
-            if self._x != val:
-                self._x = val
-                self._mark_dirty()
-                
-                if self._knot_editable:
-                    self._autofill_pith_coordinates()
-        except (ValueError, TypeError):
-            pass
+        if not value and value != 0:
+            val = None
+        else:
+            try:
+                val = int(value)
+            except (ValueError, TypeError):
+                return
+        if self._x != val:
+            self._x = val
+            self._mark_dirty()
+            
+            if self._knot_editable:
+                self._autofill_pith_coordinates()
 
     @Property(object)
     def pith_z(self):
@@ -132,7 +135,7 @@ class KnotsViewModel(QObject):
     def pith_z(self, value):
         """Set the Pith Z coordinate."""
         try:
-            val = None if value == "" or value is None else int(value)
+            val = None if not value and value != 0 else int(value)
             if self._pith_z != val:
                 self._pith_z = val
                 self._mark_dirty()
@@ -148,7 +151,7 @@ class KnotsViewModel(QObject):
     def pith_y(self, value):
         """Set the Pith Y coordinate."""
         try:
-            val = None if value == "" or value is None else int(value)
+            val = None if not value and value != 0 else int(value)
             if self._pith_y != val:
                 self._pith_y = val
                 self._mark_dirty()
@@ -174,7 +177,7 @@ class KnotsViewModel(QObject):
             self.knot_data_changed.emit()
             self._mark_dirty()
 
-    @Property(int)
+    @Property(object)
     def pruned_z(self):
         """Get the Pruned Z coordinate."""
         return self._pruned_z
@@ -183,14 +186,14 @@ class KnotsViewModel(QObject):
     def pruned_z(self, value):
         """Set the Pruned Z coordinate."""
         try:
-            val = None if value == "" or value is None else int(value)
+            val = None if not value and value != 0 else int(value)
             if self._pruned_z != val:
                 self._pruned_z = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
-    @Property(int)
+    @Property(object)
     def pruned_y(self):
         """Get the Pruned Y coordinate."""
         return self._pruned_y
@@ -199,7 +202,7 @@ class KnotsViewModel(QObject):
     def pruned_y(self, value):
         """Set the Pruned Y coordinate."""
         try:
-            val = None if value == "" or value is None else int(value)
+            val = None if not value and value != 0 else int(value)
             if self._pruned_y != val:
                 self._pruned_y = val
                 self._mark_dirty()
@@ -395,11 +398,25 @@ class KnotsViewModel(QObject):
         self._current_board = ""
         self._knots = []
         self.knots_changed.emit(self.knot_list)
-        self.handle_new_knot()
+        
+        self._current_knot_no = ""
+        self._clear_fields()
+        self.current_knot_changed.emit("")
 
     @Slot(str)
     def handle_board_changed(self, board_no: str):
         """Update current board and load its knots."""
+        board_exists = False
+        if board_no and self._current_project and self.board_repo:
+            try:
+                board = self.board_repo.get_board_by_id(board_no, self._current_project)
+                board_exists = board is not None
+            except Exception:
+                pass
+                
+        if not board_exists:
+            board_no = ""
+            
         self._current_board = board_no
         self._knot_editable = False
         self._current_knot_no = ""  # Force setter to trigger
@@ -415,7 +432,9 @@ class KnotsViewModel(QObject):
             if self._knots:
                 self.current_knot_no = str(self._knots[0].knot_no)
             else:
-                self.handle_new_knot()
+                self._current_knot_no = ""
+                self._clear_fields()
+                self.current_knot_changed.emit("")
         except LocalKnotError as e:
             self.knot_error.emit(str(e))
         except Exception as e:
@@ -449,13 +468,19 @@ class KnotsViewModel(QObject):
 
         # Auto-assign next sequential ID
         if self._knots:
-            next_id = max(int(k.knot_no) for k in self._knots) + 1
+            valid_ids = [int(k.knot_no) for k in self._knots if k.knot_no and str(k.knot_no).isdigit()]
+            next_id = max(valid_ids) + 1 if valid_ids else 1
         else:
             next_id = 1
         self._current_knot_no = str(next_id)
         self.current_knot_changed.emit(self._current_knot_no)
 
-        self._x = 0
+        self._clear_fields()
+
+    def _clear_fields(self):
+        """Helper to reset all data fields to default."""
+
+        self._x = None
         self._pith_z = None
         self._pith_y = None
         self._is_pruned_knot = False
@@ -486,19 +511,22 @@ class KnotsViewModel(QObject):
             return
 
         knot_text = str(self._current_knot_no).strip()
+        if not knot_text:
+            self.knot_error.emit("Please press 'New' before saving a knot!")
+            return
 
         # Check > 0 condition for new knots
         invalid_fields_local = []
         error_messages_local = []
         
         if self._knot_editable:
-            if self._x <= 0: 
+            if self._x is None or self._x <= 0: 
                 invalid_fields_local.append("X")
                 error_messages_local.append("Field X must be greater than 0.")
                 
         if self._is_pruned_knot:
-            if self._pruned_z == 0 or self._pruned_z is None: invalid_fields_local.append("pith_z")
-            if self._pruned_y == 0 or self._pruned_y is None: invalid_fields_local.append("pith_y")
+            if self._pruned_z is None: invalid_fields_local.append("pith_z")
+            if self._pruned_y is None: invalid_fields_local.append("pith_y")
             if "pith_z" in invalid_fields_local or "pith_y" in invalid_fields_local:
                 error_messages_local.append("Pruned Z and Pruned Y must be compiled and != 0 when pruned knot is selected.")
         else:
@@ -717,7 +745,9 @@ class KnotsViewModel(QObject):
                 if self._knots:
                     self.current_knot_no = str(self._knots[0].knot_no)
                 else:
-                    self.handle_new_knot()
+                    self._current_knot_no = ""
+                    self._clear_fields()
+                    self.current_knot_changed.emit("")
         except LocalKnotError as e:
             self.knot_error.emit(str(e))
         except Exception as e:
@@ -727,7 +757,8 @@ class KnotsViewModel(QObject):
     def handle_knot_selected(self, knot_no: str):
         """Load knot data when selected."""
         if not knot_no:
-            self.handle_new_knot()
+            self._current_knot_no = ""
+            self._clear_fields()
             return
 
         if not self._current_board or not self._current_project:

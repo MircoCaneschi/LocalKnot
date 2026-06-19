@@ -319,6 +319,11 @@ class KnotsView:
         self.knot_no_combo.blockSignals(False)
         self.hidden_knot_no_combo.blockSignals(False)
 
+        # Disable "New" button if no board or project is selected or if currently editing
+        has_board = bool(self.view_model._current_board)
+        is_editable = self.view_model._knot_editable
+        self.new_btn.setEnabled(has_board and not is_editable)
+
     def _on_knot_data_changed(self):
         """Update UI when ViewModel knot data changes."""
         line_edits = [
@@ -331,7 +336,7 @@ class KnotsView:
         self.pruned_knot.blockSignals(True)
         self.hidden_pruned_knot.blockSignals(True)
 
-        x_str = str(self.view_model.x)
+        x_str = "" if self.view_model.x is None else str(self.view_model.x)
         if self.x_line.text() != x_str:
             self.x_line.setText(x_str)
             
@@ -414,12 +419,30 @@ class KnotsView:
         """Sync combo boxes when current knot changes programmatically."""
         self.knot_no_combo.blockSignals(True)
         self.hidden_knot_no_combo.blockSignals(True)
+        
+        # If text is not empty and not in combo, add it temporarily so it can be displayed
+        if text and self.knot_no_combo.findText(text) == -1:
+            self.knot_no_combo.addItem(text)
+            self.hidden_knot_no_combo.addItem(text)
+            
         self.knot_no_combo.setCurrentText(text)
         self.hidden_knot_no_combo.setCurrentText(text)
         self.knot_no_combo.blockSignals(False)
         self.hidden_knot_no_combo.blockSignals(False)
         # Restart any hidden animations so they map correctly to the hidden state.
         self._on_validation_failed([])
+
+        # Enable/Disable input fields depending on if there is an active knot
+        has_knot = bool(text)
+        for widget in [self.x_line, self.pith_z_line, self.pith_y_line, self.comment_line,
+                       self.pruned_knot, self.hidden_x_line, self.hidden_pith_z_line, 
+                       self.hidden_pith_y_line, self.hidden_pruned_knot]:
+            if widget:
+                widget.setEnabled(has_knot)
+                
+        # Force save button disabled if no knot is selected
+        if not has_knot:
+            self.save_btn.setEnabled(False)
 
     def _trigger_pruned_animation(self):
         """Play a smooth fade-in animation on the fields when toggling pruned knot."""
@@ -495,12 +518,18 @@ class KnotsView:
         if not state:
             self.knot_no_combo.setCurrentText(self.view_model.current_knot_no)
             self.hidden_knot_no_combo.setCurrentText(self.view_model.current_knot_no)
+        else:
+            self.x_line.setFocus()
+            self.x_line.selectAll()
 
         self.knot_no_combo.blockSignals(False)
         self.hidden_knot_no_combo.blockSignals(False)
 
         self.save_btn.setEnabled(state)
         self.delete_btn.setEnabled(not state)
+
+        has_board = bool(self.view_model._current_board)
+        self.new_btn.setEnabled(has_board and not state)
 
         self.left_shift_btn.setEnabled(not state)
         self.right_shift_btn.setEnabled(not state)

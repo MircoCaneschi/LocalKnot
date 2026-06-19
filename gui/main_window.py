@@ -103,7 +103,8 @@ class MainWindow(QMainWindow):
         self.projects_vm.current_project_changed.connect(self.boards_vm.handle_project_changed)
         
         self.boards_vm.current_board_changed.connect(self.knots_vm.handle_board_changed)
-        self.boards_vm.board_saved.connect(lambda msg: self.knots_vm.reload_knots())
+        # When a board is saved, notify KnotsVM so it re-verifies board existence and unlocks
+        self.boards_vm.board_saved.connect(lambda msg: self.knots_vm.handle_board_changed(self.boards_vm.current_board_no))
 
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()
