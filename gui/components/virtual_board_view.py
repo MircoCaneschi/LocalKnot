@@ -51,7 +51,7 @@ class VirtualBoardView(QWidget):
             # Extract side number from name e.g. "side1_top" -> "Side 1:"
             side_num = side_name.split("_")[0].replace("side", "")
             side_label = QLabel(f"<b>Side {side_num}:</b>")
-            side_label.setStyleSheet("font-size: 14px; text-decoration: underline; margin-right: 10px;")
+            side_label.setObjectName("VirtualBoardSideLabel")
             
             if orientation == "horizontal":
                 outer = QHBoxLayout(container)
@@ -125,15 +125,7 @@ class VirtualBoardView(QWidget):
 
         # Error Message Label (Prominent Banner at the top)
         self.error_msg = QLabel()
-        self.error_msg.setStyleSheet(
-            "color: #d32f2f; "
-            "font-weight: bold; "
-            "font-size: 13px; "
-            "background-color: #ffebee; "
-            "padding: 8px; "
-            "border-radius: 4px; "
-            "border: 1px solid #ffcdd2;"
-        )
+        self.error_msg.setObjectName("VirtualBoardErrorMsg")
         self.error_msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.error_msg.setWordWrap(True)
         self.error_msg.hide()
@@ -207,15 +199,23 @@ class VirtualBoardView(QWidget):
         if base <= 0 or hight <= 0:
             return
             
-        # La sceneRect viene ora calcolata in modo dinamico alla fine del disegno
-        # per includere la tavola e tutte le frecce.
+        # The sceneRect is now dynamically calculated at the end of the drawing
+        # to include the board and all arrows.
         
-        # Penna cosmetica per i bordi (rimane sottile a qualsiasi livello di zoom)
+        # Cosmetic pen for borders (remains thin at any zoom level)
         board_pen = QPen(Qt.black, 1.5)
         board_pen.setCosmetic(True)
         
-        # Disegno della sezione della tavola
+        # Drawing the board section
         board_rect = self.scene.addRect(0, 0, hight, base, board_pen, QBrush(QColor(240, 230, 210)))
+
+        # Vertical dashed lines at quarters (1/4 and 3/4 of the width, which represents the board's height)
+        quarter_pen = QPen(QColor(0, 0, 0, 60), 2)
+        quarter_pen.setStyle(Qt.DashLine)
+        quarter_pen.setCosmetic(True)
+        
+        self.scene.addLine(hight / 4, 0, hight / 4, base, quarter_pen)
+        self.scene.addLine(3 * hight / 4, 0, 3 * hight / 4, base, quarter_pen)
 
         # ── Coordinate-convention arrows ──────────────────────────────────────
         # Drawn always (when a board exists), outside the board rect, parallel
@@ -358,7 +358,7 @@ class VirtualBoardView(QWidget):
         vm = self.knots_vm
 
 
-        # Conversione coordinate: X = hight - z, Y = base - y
+        # Coordinate conversion: X = hight - z, Y = base - y
         def map_x(z): return hight - z
         def map_y(y): return base - y
 
@@ -537,8 +537,8 @@ class VirtualBoardView(QWidget):
                 label_color=QColor(40, 10, 0),
             )
 
-        # Calcoliamo il rettangolo di ingombro totale (frecce blu a -_gap, frecce rosse a _ox, _oy)
-        # Aggiungiamo un margine proporzionale del 10% per contenere comodamente anche le scritte
+        # Calculate the total bounding rectangle (blue arrows at -_gap, red arrows at _ox, _oy)
+        # Add a proportional margin of 10% to comfortably include text
         pad = max(hight, base) * 0.10
         min_x = -_gap - pad
         min_y = -_gap - pad
@@ -546,7 +546,7 @@ class VirtualBoardView(QWidget):
         max_y = _oy + pad
         self.scene.setSceneRect(min_x, min_y, max_x - min_x, max_y - min_y)
         
-        # Forza il ridimensionamento della vista per farla fittare nello spazio a disposizione
+        # Force the view to resize to fit the available space
         self.graphics_view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def _on_virtual_board_error(self, msg: str):
@@ -568,13 +568,9 @@ class VirtualBoardView(QWidget):
             self._animations = []
         self._animations.append(anim)
         anim.finished.connect(lambda a=anim: self._animations.remove(a) if a in self._animations else None)
-        anim.finished.connect(lambda: self.error_msg.setStyleSheet(
-            "color: #d32f2f; font-weight: bold; font-size: 13px; "
-            "background-color: #ffebee; padding: 8px; border-radius: 4px; border: 1px solid #ffcdd2;"
-        ))
+        anim.finished.connect(lambda: self.error_msg.setStyleSheet(""))
         anim.valueChanged.connect(lambda color: self.error_msg.setStyleSheet(
-            f"color: {color.name()}; font-weight: bold; font-size: 13px; "
-            f"background-color: #ffebee; padding: 8px; border-radius: 4px; border: 1px solid {color.name()};"
+            f"color: {color.name()}; border-color: {color.name()};"
         ))
         anim.start(QAbstractAnimation.DeleteWhenStopped)
 

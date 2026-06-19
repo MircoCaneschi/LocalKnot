@@ -37,5 +37,10 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Riferimenti esterni (esclusi)
+# external references
 riferimento java/
+
+#demo
+dist/
+build/
+*.spec
