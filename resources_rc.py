@@ -4348,53 +4348,232 @@ du\xf5\xc3\x01l\xe5\xd6P\x94\x07\xe5\x1b\x8e\xbd\xf2\
 \x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x15\x17\x11\xff\
 \x1f\xff\x8e_\xf6\xee\xbcIx\x00\x00\x00\x00IEN\
 D\xaeB`\x82\
-\x00\x00\x02\xcb\
+\x00\x00\x0d\xf1\
 Q\
 MainWindow {\x0a   \
  background-colo\
-r: #F59D67;\x0a}\x0aQG\
+r: #71a9f2;\x0a}\x0aQG\
 roupBox {\x0a    ba\
 ckground-color: \
-#BD8142;\x0a    col\
-or: #824300;\x0a   \
+#4a4986;\x0a    col\
+or: #bea6f9;\x0a   \
  border-radius: \
 10px;\x0a    paddin\
-g: 10px;\x0a}\x0aQPush\
-Button {\x0a    bac\
-kground-color: #\
-824300;\x0a    colo\
-r: white;\x0a    pa\
-dding: 5px;\x0a    \
-border-radius: 1\
-0px;\x0a}\x0aQPushButt\
-on:hover {\x0a    c\
-olor: yellow;\x0a}\x0a\
-QPushButton:pres\
-sed {\x0a    backgr\
-ound-color: #A85\
-C0A;\x0a    padding\
--left: 7px;\x0a    \
-padding-top: 7px\
-;\x0a}\x0aQPushButton:\
-disabled {\x0a    b\
-ackground-color:\
- #A06A33;\x0a    co\
-lor: #D3A87C;\x0a}\x0a\
-QLabel {\x0a    col\
-or: #824300;\x0a   \
- font-size: 120p\
-t;\x0a    font-weig\
-ht: bold;\x0a}\x0a\x0a/* \
-Stili specifici \
-per l'Header */\x0a\
-QLabel#HeaderTit\
-le {\x0a    font-si\
-ze: 2pt;\x0a    fon\
+g: 10px;\x0a    fon\
+t-size: 10pt;\x0a  \
+  font-weight: b\
+old;\x0a}\x0aQGroupBox\
+ > QLabel{\x0a    c\
+olor: #bea6f9;\x0a}\
+\x0aQPushButton {\x0a \
+   background-co\
+lor: #000082;\x0a  \
+  color: white;\x0a\
+    padding: 5px\
+;\x0a    border-rad\
+ius: 10px;\x0a}\x0aQPu\
+shButton:hover {\
+\x0a    color: yell\
+ow;\x0a}\x0aQPushButto\
+n:pressed {\x0a    \
+background-color\
+: #5c58ce;\x0a    p\
+adding-left: 7px\
+;\x0a    padding-to\
+p: 7px;\x0a}\x0aQPushB\
+utton:disabled {\
+\x0a    background-\
+color: #9f91f7;\x0a\
+    color: #3244\
+93;\x0a}\x0aQLabel {\x0a \
+   color: #32449\
+3;\x0a    font-size\
+: 9pt;\x0a}\x0a\x0a/* Spe\
+cific styles for\
+ the Header */\x0aQ\
+Label#HeaderTitl\
+e {\x0a    font-siz\
+e: 24pt;\x0a    fon\
 t-weight: bold;\x0a\
-    color: #8243\
-00; /* Manteniam\
-o il colore del \
-tema */\x0a}\x0a\
+    color: #3710\
+9a; /* Keep the \
+theme color */\x0a}\
+\x0a\x0a/* --- QScroll\
+Area --- */\x0aQScr\
+ollArea {\x0a    ba\
+ckground-color: \
+transparent;\x0a   \
+ border: none;\x0a}\
+\x0a\x0aQScrollArea > \
+QWidget > QWidge\
+t {\x0a    backgrou\
+nd-color: transp\
+arent;\x0a}\x0a\x0a/* ---\
+ Vertical Scroll\
+bar --- */\x0aQScro\
+llBar:vertical {\
+\x0a    border: non\
+e;\x0a    backgroun\
+d: transparent;\x0a\
+    width: 14px;\
+\x0a    margin: 0px\
+;\x0a}\x0a\x0aQScrollBar:\
+:handle:vertical\
+ {\x0a    backgroun\
+d: #000082;\x0a    \
+min-height: 20px\
+;\x0a    /* Visual \
+width is 6px (14\
+px total - 4px l\
+eft - 4px right)\
+.\x0a       In Qt, \
+border-radius CA\
+NNOT exceed half\
+ the width (3px)\
+,\x0a       otherwi\
+se it breaks and\
+ falls back to a\
+ square! */\x0a    \
+border-radius: 3\
+px;\x0a    margin: \
+4px 4px 4px 4px;\
+ \x0a}\x0a\x0aQScrollBar:\
+:handle:vertical\
+:hover {\x0a    bac\
+kground: #4a4986\
+;\x0a    /* Expandi\
+ng on hover: Vis\
+ual width become\
+s 10px (14px - 2\
+px left - 2px ri\
+ght).\x0a       We \
+can increase the\
+ radius up to 5p\
+x to keep it rou\
+nded. */\x0a    bor\
+der-radius: 5px;\
+\x0a    margin: 2px\
+ 2px 2px 2px; \x0a}\
+\x0a\x0a/* hide top/bo\
+ttom arrows */\x0aQ\
+ScrollBar::add-l\
+ine:vertical, QS\
+crollBar::sub-li\
+ne:vertical {\x0a  \
+  height: 0px;\x0a}\
+\x0a\x0aQScrollBar::ad\
+d-page:vertical,\
+ QScrollBar::sub\
+-page:vertical {\
+\x0a    background:\
+ none;\x0a}\x0a\x0a/* ---\
+ Horizontal Scro\
+llbar --- */\x0aQSc\
+rollBar:horizont\
+al {\x0a    border:\
+ none;\x0a    backg\
+round: transpare\
+nt;\x0a    height: \
+14px;\x0a    margin\
+: 0px;\x0a}\x0a\x0aQScrol\
+lBar::handle:hor\
+izontal {\x0a    ba\
+ckground: #00008\
+2;\x0a    min-width\
+: 20px;\x0a    /* V\
+isual height is \
+6px (14px - 4px \
+top - 4px bottom\
+) -> max radius \
+3px */\x0a    borde\
+r-radius: 3px;\x0a \
+   margin: 4px 4\
+px 4px 4px;\x0a}\x0a\x0aQ\
+ScrollBar::handl\
+e:horizontal:hov\
+er {\x0a    backgro\
+und: #4a4986;\x0a  \
+  /* Visual heig\
+ht becomes 10px \
+-> max radius 5p\
+x */\x0a    border-\
+radius: 5px;\x0a   \
+ margin: 2px 2px\
+ 2px 2px;\x0a}\x0a\x0a/* \
+hide right/left \
+arrows */\x0aQScrol\
+lBar::add-line:h\
+orizontal, QScro\
+llBar::sub-line:\
+horizontal {\x0a   \
+ width: 0px;\x0a}\x0a\x0a\
+QScrollBar::add-\
+page:horizontal,\
+ QScrollBar::sub\
+-page:horizontal\
+ {\x0a    backgroun\
+d: none;\x0a}\x0a\x0a/* -\
+-- Results Toggl\
+e Button --- */\x0a\
+/* normalColor, \
+hoverColor, pres\
+sedColor are rea\
+d by FlaredTabBu\
+tton.paintEvent \
+*/\x0aQPushButton#R\
+esultsToggleBtn \
+{\x0a    background\
+-color: transpar\
+ent;\x0a    border:\
+ none;\x0a    margi\
+n-top: 0px;\x0a    \
+padding-top: 0px\
+;\x0a    padding-bo\
+ttom: 0px;\x0a    q\
+property-normalC\
+olor: #4a4986;\x0a \
+   qproperty-hov\
+erColor: #5c58ce\
+;\x0a    qproperty-\
+pressedColor: #3\
+7109a;\x0a}\x0aQPushBu\
+tton#ResultsTogg\
+leBtn:hover {\x0a  \
+  background-col\
+or: transparent;\
+\x0a}\x0aQPushButton#R\
+esultsToggleBtn:\
+pressed {\x0a    ba\
+ckground-color: \
+transparent;\x0a   \
+ padding-left: 0\
+px;\x0a    padding-\
+top: 0px;\x0a}\x0a\x0a/* \
+--- Results Divi\
+der --- */\x0a/* ma\
+rgin matches QGr\
+oupBox border-ra\
+dius so the line\
+ aligns with the\
+ rounded box edg\
+es */\x0aQFrame#Res\
+ultsDivider {\x0a  \
+  background-col\
+or: #4a4986;\x0a   \
+ min-height: 2px\
+;\x0a    max-height\
+: 2px;\x0a    borde\
+r: none;\x0a    mar\
+gin-left: 10px;\x0a\
+    margin-right\
+: 10px;\x0a}\x0a\x0a/* --\
+- Virtual Board \
+Side Inputs --- \
+*/\x0aQWidget#SideI\
+nputContainer QL\
+abel {\x0a    font-\
+weight: bold;\x0a}\x0a\
+\
 "
 
 qt_resource_name = b"\
@@ -4424,7 +4603,7 @@ qt_resource_struct = b"\
 \x00\x00\x00\x00\x00\x02\x00\x00\x00\x01\x00\x00\x00\x03\
 \x00\x00\x00\x00\x00\x00\x00\x00\
 \x00\x00\x004\x00\x00\x00\x00\x00\x01\x00\x01\x0f:\
-\x00\x00\x01\x9ec7\x82_\
+\x00\x00\x01\x9e\xb1V\xc5\x8b\
 \x00\x00\x00 \x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\
 \x00\x00\x01\x9eN\xe2.\xf1\
 "

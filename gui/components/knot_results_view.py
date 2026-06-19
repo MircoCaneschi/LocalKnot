@@ -3,7 +3,16 @@ from PySide6.QtWidgets import (
     QPushButton, QGroupBox, QLabel, QFrame, QStyle
 )
 from PySide6.QtCore import Qt, QSize, Property
-from PySide6.QtGui import QPainter, QPainterPath, QColor, QPixmap
+from PySide6.QtGui import QPainter, QPainterPath, QColor, QPixmap, QIcon
+
+import sys
+import os
+from pathlib import Path
+
+if getattr(sys, 'frozen', False):
+    PROJECT_ROOT = Path(sys._MEIPASS)
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 class FlaredTabButton(QPushButton):
     """A custom button that draws an outward-flared tab shape at the top.
@@ -79,11 +88,12 @@ class FlaredTabButton(QPushButton):
         text_rect = font_metrics.boundingRect(self.text())
         
         icon = self.icon()
-        icon_size = self.iconSize()
-        if not icon_size.isValid() or icon_size.width() == 0:
-            icon_size = QSize(16, 16)
+        # Force a larger icon size for better visibility
+        icon_size = QSize(24, 24)
             
-        spacing = 4
+        # Spacing between text and icon (was 4, set to 0 to bring them closer)
+        # Using negative spacing because the SVG itself has empty margins
+        spacing = -6
         total_height = text_rect.height() + icon_size.height() + spacing
         start_y = (h - total_height) // 2
         
@@ -94,6 +104,7 @@ class FlaredTabButton(QPushButton):
         pixmap = icon.pixmap(icon_size)
         if not pixmap.isNull():
             tinted = QPixmap(pixmap.size())
+            tinted.setDevicePixelRatio(pixmap.devicePixelRatio())
             tinted.fill(Qt.GlobalColor.transparent)
             p2 = QPainter(tinted)
             p2.drawPixmap(0, 0, pixmap)
@@ -181,10 +192,10 @@ class KnotResultsView(QWidget):
         btn_layout.addStretch()
         
         # Button to show/hide results
-        self.toggle_results_btn = FlaredTabButton("Show parameters\n")
+        self.toggle_results_btn = FlaredTabButton("Show parameters")
         self.toggle_results_btn.setObjectName("ResultsToggleBtn")
         self.toggle_results_btn.setFixedWidth(160)
-        icon_down = self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarUnshadeButton)
+        icon_down = QIcon(str(PROJECT_ROOT / "imgs" / "arrow_down.svg"))
         self.toggle_results_btn.setIcon(icon_down)
         self.toggle_results_btn.clicked.connect(self._toggle_results)
         
@@ -215,7 +226,7 @@ class KnotResultsView(QWidget):
             self.anim.start()
             
             self.toggle_results_btn.setText("Show parameters")
-            icon_down = self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarUnshadeButton)
+            icon_down = QIcon(str(PROJECT_ROOT / "imgs" / "arrow_down.svg"))
             self.toggle_results_btn.setIcon(icon_down)
         else:
             # Setup expand animation
@@ -232,7 +243,7 @@ class KnotResultsView(QWidget):
             self.anim.start()
             
             self.toggle_results_btn.setText("Hide parameters")
-            icon_up = self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarShadeButton)
+            icon_up = QIcon(str(PROJECT_ROOT / "imgs" / "arrow_up.svg"))
             self.toggle_results_btn.setIcon(icon_up)
 
     def _on_animation_finished(self):

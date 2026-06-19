@@ -1,6 +1,38 @@
 QMainWindow {
     background-color: #71a9f2;
 }
+
+QLineEdit{
+    border-radius: 5px;
+    padding: 3px;
+    margin-top: 3px;
+    background-color: #ffffff;
+    color: #000000;
+    selection-background-color: #5c58ce;
+}
+
+/* QComboBox specific style */
+QComboBox {
+    border-radius: 5px;
+    margin-right: 3px;
+    padding: 3px;
+    background-color: #ffffff;
+    color: #000000;
+}
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #4a4986;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background-color: #f0f0f0;
+}
+QComboBox::down-arrow {
+    image: url({{IMGS_PATH}}/arrow_down.svg);
+    width: 21px;
+    height: 21px;
+}
 QGroupBox {
     background-color: #4a4986;
     color: #bea6f9;
@@ -155,3 +187,6 @@ QFrame#ResultsDivider {
 QWidget#SideInputContainer QLabel {
     font-weight: bold;
 }
+
+
+

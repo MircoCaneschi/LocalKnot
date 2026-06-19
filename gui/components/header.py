@@ -22,7 +22,7 @@ class HeaderWidget(QWidget):
             # Scale it to a larger header height
             logo_label.setPixmap(logo_pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation))
         
-        title_label = QLabel("LocalKnot")
+        title_label = QLabel("KnotVision")
         # Assign ObjectName to be styled via QSS
         title_label.setObjectName("HeaderTitle")
         

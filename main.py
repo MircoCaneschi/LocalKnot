@@ -13,28 +13,45 @@ MainWindow handles all MVVM component initialization:
 
 import sys
 import os
+import ctypes
 from pathlib import Path
 
 # Add the project root directory to the Python path
-project_root = Path(__file__).resolve().parent
+if getattr(sys, 'frozen', False):
+    project_root = Path(sys._MEIPASS)
+else:
+    project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QIcon
 from PySide6.QtCore import QFile, QTextStream, QIODevice
 from gui.main_window import MainWindow
 import resources_rc
 
 def main():
     """Application entry point - MVVM Architecture."""
-    app = QApplication(sys.argv)
+    
+    if os.name == 'nt':
+        myappid = 'localknot.demo.version.1'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
-    # Apply global stylesheet directly from the filesystem for easier development
-    # (Alternatively, to use the compiled resource: QFile(":/styles/style.qss"))
+    app = QApplication(sys.argv)
+    icon_path = os.path.join(project_root, "imgs", "logo_DEMO.ico")
+    app.setWindowIcon(QIcon(icon_path))
+
+    # Apply global stylesheet directly from the filesystem
     qss_file_path = os.path.join(project_root, "styles", "style.qss")
     qss_file = QFile(qss_file_path)
     if qss_file.open(QIODevice.ReadOnly | QIODevice.Text):
         stream = QTextStream(qss_file)
-        app.setStyleSheet(stream.readAll())
+        qss_content = stream.readAll()
+        
+        # Inject the absolute images path into the QSS
+        imgs_path = os.path.join(project_root, "imgs").replace("\\", "/")
+        qss_content = qss_content.replace("{{IMGS_PATH}}", imgs_path)
+        
+        app.setStyleSheet(qss_content)
         qss_file.close()
 
     # Create and show main window
