@@ -34,7 +34,7 @@ class ExportManager:
             "No_Board;No_Knot;X;tKnot;mKnot;tKAR;mKAR_L;mKAR_R;mKAR;DEB;DAB;DEK;EEB;EAB;"
             "x_tKAR;SplayKnot;B_Comment;Thick;Width;Length;Testpos;Pith;Pith_Y;Pith_Z;"
             "K_Comment;S1_Z1;S1_Z2;S1_Dmin;S2_Y1;S2_Y2;S2_Dmin;S3_Z1;S3_Z2;S3_Dmin;S4_Y1;S4_Y2;S4_Dmin;"
-            "Pruned;Pruned_Y;Pruned_Z;"
+            "Pruned;Pruned_Y1;Pruned_Z1;Pruned_Y2;Pruned_Z2;"
         )
 
         lines = [header]
@@ -56,7 +56,7 @@ class ExportManager:
                     f"{no_board};;;;;;;;;;;;;;;"  # No_Knot to x_tKAR, SplayKnot
                     f";{b_comment};{thick};{width};{length};{testpos};;;;"  # Pith, Pith_Y, Pith_Z
                     f";;;;;;;;;;;;;;;" # K_Comment, S1..S4
-                    f";;;" # Pruned, Pruned_Y, Pruned_Z
+                    f";;;;;" # Pruned, Pruned_Y1, Pruned_Z1, Pruned_Y2, Pruned_Z2
                 )
                 lines.append(line)
                 continue
@@ -94,8 +94,10 @@ class ExportManager:
                 k_comment = self._val_str(knot.comment)
                 
                 pruned = "1" if std_knot.is_pruned_knot else "0"
-                pruned_y = self._val_str(std_knot.pruned_y)
-                pruned_z = self._val_str(std_knot.pruned_z)
+                pruned_y1 = self._val_str(std_knot.pruned_y1)
+                pruned_z1 = self._val_str(std_knot.pruned_z1)
+                pruned_y2 = self._val_str(std_knot.pruned_y2)
+                pruned_z2 = self._val_str(std_knot.pruned_z2)
 
                 s1_z1 = self._val_str(std_knot.side1_z1)
                 s1_z2 = self._val_str(std_knot.side1_z2)
@@ -114,7 +116,7 @@ class ExportManager:
                     f"{no_board};{no_knot};{x};{tknot};{mknot};{tkar};{mkar_l};{mkar_r};{mkar};{deb};{dab};{dek};{eeb};{eab};"
                     f"{x_tkar};{splayknot};{b_comment};{thick};{width};{length};{testpos};{pith};{pith_y};{pith_z};"
                     f"{k_comment};{s1_z1};{s1_z2};{s1_dmin};{s2_y1};{s2_y2};{s2_dmin};{s3_z1};{s3_z2};{s3_dmin};{s4_y1};{s4_y2};{s4_dmin};"
-                    f"{pruned};{pruned_y};{pruned_z};"
+                    f"{pruned};{pruned_y1};{pruned_z1};{pruned_y2};{pruned_z2};"
                 )
                 
                 # Sostituisco i N/A con stringa vuota per uniformità con java

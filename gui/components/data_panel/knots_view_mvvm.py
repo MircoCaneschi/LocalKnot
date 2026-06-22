@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QComboBox, QLineEdit, QCheckBox, QLabel, QMessageBox, QSizePolicy
 )
 from PySide6.QtGui import QIntValidator
+from PySide6.QtCore import Qt
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import KnotsViewModel
@@ -32,6 +33,8 @@ class KnotsView:
         self.x_line = None
         self.pith_z_line = None
         self.pith_y_line = None
+        self.pruned_z2_line = None
+        self.pruned_y2_line = None
         self.comment_line = None
         self.pruned_knot = None
         self.knot_msg = None
@@ -44,6 +47,8 @@ class KnotsView:
         self.hidden_x_line = None
         self.hidden_pith_z_line = None
         self.hidden_pith_y_line = None
+        self.hidden_pruned_z2_line = None
+        self.hidden_pruned_y2_line = None
         self.hidden_pruned_knot = None
         
         self._last_pruned_state = False
@@ -56,6 +61,10 @@ class KnotsView:
         self.pith_y_label = None
         self.hidden_pith_z_label = None
         self.hidden_pith_y_label = None
+        self.pruned_z2_label = None
+        self.pruned_y2_label = None
+        self.hidden_pruned_z2_label = None
+        self.hidden_pruned_y2_label = None
         self._animations = []
 
         # Setup UI
@@ -75,7 +84,7 @@ class KnotsView:
         """Create and layout all main panel UI components."""
         # main grid layout
         self.main_layout = QGridLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setContentsMargins(0, 15, 0, 0)
         self.main_layout.setSpacing(2)
 
         # sub-layouts in the grid
@@ -121,11 +130,15 @@ class KnotsView:
         self.x_line = QLineEdit()
         self.pith_z_line = QLineEdit()
         self.pith_y_line = QLineEdit()
+        self.pruned_z2_line = QLineEdit()
+        self.pruned_y2_line = QLineEdit()
         
         validator = QIntValidator()
         self.x_line.setValidator(validator)
         self.pith_z_line.setValidator(validator)
         self.pith_y_line.setValidator(validator)
+        self.pruned_z2_line.setValidator(validator)
+        self.pruned_y2_line.setValidator(validator)
         
         self.comment_line = QLineEdit()
         self.pruned_knot = QCheckBox()
@@ -134,11 +147,20 @@ class KnotsView:
         self.x_label = QLabel("X")
         self.pith_z_label = QLabel("Pith Z")
         self.pith_y_label = QLabel("Pith Y")
+        self.pruned_z2_label = QLabel("Pruned Z2")
+        self.pruned_y2_label = QLabel("Pruned Y2")
         data_layout.addRow(self.x_label, self.x_line)
         data_layout.addRow(self.pith_z_label, self.pith_z_line)
         data_layout.addRow(self.pith_y_label, self.pith_y_line)
+        data_layout.addRow(self.pruned_z2_label, self.pruned_z2_line)
+        data_layout.addRow(self.pruned_y2_label, self.pruned_y2_line)
         data_layout.addRow("Comment", self.comment_line)
         data_layout.addRow("Pruned knot", self.pruned_knot)
+
+        self.pruned_z2_label.hide()
+        self.pruned_z2_line.hide()
+        self.pruned_y2_label.hide()
+        self.pruned_y2_line.hide()
 
         # Message label
         self.knot_msg = QLabel()
@@ -148,10 +170,11 @@ class KnotsView:
         self.knot_msg.hide()
 
         # grid disposition
-        self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
-        self.main_layout.addLayout(crud_layout, 1, 1, 3, 1)
-        self.main_layout.addLayout(data_layout, 0, 2, 6, 1)
-        self.main_layout.addWidget(self.knot_msg, 4, 0, 1, 2)
+        from PySide6.QtCore import Qt
+        self.main_layout.addLayout(bottom_layout, 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addLayout(crud_layout, 0, 1, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addLayout(data_layout, 0, 2, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addWidget(self.knot_msg, 1, 0, 1, 3)
 
     def _setup_hidden_layout(self):
         """Create and layout all hidden panel UI components."""
@@ -187,11 +210,15 @@ class KnotsView:
         self.hidden_x_line = QLineEdit()
         self.hidden_pith_z_line = QLineEdit()
         self.hidden_pith_y_line = QLineEdit()
+        self.hidden_pruned_z2_line = QLineEdit()
+        self.hidden_pruned_y2_line = QLineEdit()
         
         validator = QIntValidator()
         self.hidden_x_line.setValidator(validator)
         self.hidden_pith_z_line.setValidator(validator)
         self.hidden_pith_y_line.setValidator(validator)
+        self.hidden_pruned_z2_line.setValidator(validator)
+        self.hidden_pruned_y2_line.setValidator(validator)
 
         x = QFormLayout()
         x.setContentsMargins(0, 0, 0, 0)
@@ -199,25 +226,41 @@ class KnotsView:
         pith_z.setContentsMargins(5, 0, 0, 0)
         pith_y = QFormLayout()
         pith_y.setContentsMargins(5, 0, 0, 0)
+        pruned_z2 = QFormLayout()
+        pruned_z2.setContentsMargins(5, 0, 0, 0)
+        pruned_y2 = QFormLayout()
+        pruned_y2.setContentsMargins(5, 0, 0, 0)
         
         self.hidden_x_label = QLabel("X")
         self.hidden_pith_z_label = QLabel("Pith Z")
         self.hidden_pith_y_label = QLabel("Pith Y")
+        self.hidden_pruned_z2_label = QLabel("Pruned Z2")
+        self.hidden_pruned_y2_label = QLabel("Pruned Y2")
         x.addRow(self.hidden_x_label, self.hidden_x_line)
         pith_z.addRow(self.hidden_pith_z_label, self.hidden_pith_z_line)
         pith_y.addRow(self.hidden_pith_y_label, self.hidden_pith_y_line)
+        pruned_z2.addRow(self.hidden_pruned_z2_label, self.hidden_pruned_z2_line)
+        pruned_y2.addRow(self.hidden_pruned_y2_label, self.hidden_pruned_y2_line)
         hidden_data_layout.addLayout(x)
         hidden_data_layout.addLayout(pith_z)
         hidden_data_layout.addLayout(pith_y)
+        hidden_data_layout.addLayout(pruned_z2)
+        hidden_data_layout.addLayout(pruned_y2)
+
+        self.hidden_pruned_z2_label.hide()
+        self.hidden_pruned_z2_line.hide()
+        self.hidden_pruned_y2_label.hide()
+        self.hidden_pruned_y2_line.hide()
 
         self.hidden_pruned_knot = QCheckBox()
         self.hidden_pruned_knot.setChecked(False)
         hidden_data_layout.addWidget(self.hidden_pruned_knot)
 
         # grid disposition
-        self.hidden_main_layout.addLayout(hidden_top_layout, 0, 1, 1, 1)
-        self.hidden_main_layout.addLayout(hidden_bottom_layout, 0, 0, 1, 1)
-        self.hidden_main_layout.addLayout(hidden_data_layout, 1, 0, 3, 2)
+        from PySide6.QtCore import Qt
+        self.hidden_main_layout.addLayout(hidden_top_layout, 0, 1, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.hidden_main_layout.addLayout(hidden_bottom_layout, 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.hidden_main_layout.addLayout(hidden_data_layout, 1, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
 
     # ==================== BINDING ====================
 
@@ -228,7 +271,9 @@ class KnotsView:
             combo.activated.connect(self._hide_messages)
         
         for le in [self.x_line, self.pith_z_line, self.pith_y_line, self.comment_line,
-                   self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line]:
+                   self.pruned_z2_line, self.pruned_y2_line,
+                   self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line,
+                   self.hidden_pruned_z2_line, self.hidden_pruned_y2_line]:
             le.textEdited.connect(self._hide_messages)
 
         for cb in [self.pruned_knot, self.hidden_pruned_knot]:
@@ -254,6 +299,8 @@ class KnotsView:
         self.x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.x_line.text() or 0))
         self.pith_z_line.textChanged.connect(self._update_z)
         self.pith_y_line.textChanged.connect(self._update_y)
+        self.pruned_z2_line.textChanged.connect(lambda: setattr(self.view_model, 'pruned_z2', self.pruned_z2_line.text() or None))
+        self.pruned_y2_line.textChanged.connect(lambda: setattr(self.view_model, 'pruned_y2', self.pruned_y2_line.text() or None))
         self.comment_line.textChanged.connect(lambda: setattr(self.view_model, 'comment', self.comment_line.text()))
         self.pruned_knot.stateChanged.connect(lambda: setattr(self.view_model, 'is_pruned_knot', self.pruned_knot.isChecked()))
 
@@ -261,6 +308,8 @@ class KnotsView:
         self.hidden_x_line.textChanged.connect(lambda: setattr(self.view_model, 'x', self.hidden_x_line.text() or 0))
         self.hidden_pith_z_line.textChanged.connect(self._update_z)
         self.hidden_pith_y_line.textChanged.connect(self._update_y)
+        self.hidden_pruned_z2_line.textChanged.connect(lambda: setattr(self.view_model, 'pruned_z2', self.hidden_pruned_z2_line.text() or None))
+        self.hidden_pruned_y2_line.textChanged.connect(lambda: setattr(self.view_model, 'pruned_y2', self.hidden_pruned_y2_line.text() or None))
         self.hidden_pruned_knot.stateChanged.connect(lambda: setattr(self.view_model, 'is_pruned_knot', self.hidden_pruned_knot.isChecked()))
 
         # Sync main and hidden components directly
@@ -272,6 +321,12 @@ class KnotsView:
         
         self.pith_y_line.textEdited.connect(self.hidden_pith_y_line.setText)
         self.hidden_pith_y_line.textEdited.connect(self.pith_y_line.setText)
+
+        self.pruned_z2_line.textEdited.connect(self.hidden_pruned_z2_line.setText)
+        self.hidden_pruned_z2_line.textEdited.connect(self.pruned_z2_line.setText)
+        
+        self.pruned_y2_line.textEdited.connect(self.hidden_pruned_y2_line.setText)
+        self.hidden_pruned_y2_line.textEdited.connect(self.pruned_y2_line.setText)
         
         self.pruned_knot.toggled.connect(self.hidden_pruned_knot.setChecked)
         self.hidden_pruned_knot.toggled.connect(self.pruned_knot.setChecked)
@@ -289,13 +344,13 @@ class KnotsView:
 
     def _update_z(self, text):
         if self.pruned_knot.isChecked():
-            setattr(self.view_model, 'pruned_z', text)
+            setattr(self.view_model, 'pruned_z1', text)
         else:
             setattr(self.view_model, 'pith_z', text)
             
     def _update_y(self, text):
         if self.pruned_knot.isChecked():
-            setattr(self.view_model, 'pruned_y', text)
+            setattr(self.view_model, 'pruned_y1', text)
         else:
             setattr(self.view_model, 'pith_y', text)
 
@@ -327,8 +382,8 @@ class KnotsView:
     def _on_knot_data_changed(self):
         """Update UI when ViewModel knot data changes."""
         line_edits = [
-            self.x_line, self.pith_z_line, self.pith_y_line, self.comment_line,
-            self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line
+            self.x_line, self.pith_z_line, self.pith_y_line, self.pruned_z2_line, self.pruned_y2_line, self.comment_line,
+            self.hidden_x_line, self.hidden_pith_z_line, self.hidden_pith_y_line, self.hidden_pruned_z2_line, self.hidden_pruned_y2_line
         ]
         
         for le in line_edits:
@@ -352,32 +407,66 @@ class KnotsView:
         
         is_pruned = self.view_model.is_pruned_knot
         if is_pruned:
-            self.pith_z_label.setText("Pruned Z")
-            self.pith_y_label.setText("Pruned Y")
-            self.hidden_pith_z_label.setText("Pruned Z")
-            self.hidden_pith_y_label.setText("Pruned Y")
-            z_val = self.view_model.pruned_z
-            y_val = self.view_model.pruned_y
+            self.pith_z_label.setText("Pruned Z1")
+            self.pith_y_label.setText("Pruned Y1")
+            self.hidden_pith_z_label.setText("Pruned Z1")
+            self.hidden_pith_y_label.setText("Pruned Y1")
+            self.pruned_z2_label.show()
+            self.pruned_z2_line.show()
+            self.pruned_y2_label.show()
+            self.pruned_y2_line.show()
+            
+            self.hidden_pruned_z2_label.show()
+            self.hidden_pruned_z2_line.show()
+            self.hidden_pruned_y2_label.show()
+            self.hidden_pruned_y2_line.show()
+            
+            z_val = self.view_model.pruned_z1
+            y_val = self.view_model.pruned_y1
+            z2_val = self.view_model.pruned_z2
+            y2_val = self.view_model.pruned_y2
         else:
             self.pith_z_label.setText("Pith Z")
             self.pith_y_label.setText("Pith Y")
             self.hidden_pith_z_label.setText("Pith Z")
             self.hidden_pith_y_label.setText("Pith Y")
+            self.pruned_z2_label.hide()
+            self.pruned_z2_line.hide()
+            self.pruned_y2_label.hide()
+            self.pruned_y2_line.hide()
+            
+            self.hidden_pruned_z2_label.hide()
+            self.hidden_pruned_z2_line.hide()
+            self.hidden_pruned_y2_label.hide()
+            self.hidden_pruned_y2_line.hide()
+            
             z_val = self.view_model.pith_z
             y_val = self.view_model.pith_y
+            z2_val = None
+            y2_val = None
 
         z_str = "" if z_val is None else str(z_val)
         y_str = "" if y_val is None else str(y_val)
+        z2_str = "" if z2_val is None else str(z2_val)
+        y2_str = "" if y2_val is None else str(y2_val)
         
         if self.pith_z_line.text() != z_str:
             self.pith_z_line.setText(z_str)
         if self.pith_y_line.text() != y_str:
             self.pith_y_line.setText(y_str)
+        if self.pruned_z2_line.text() != z2_str:
+            self.pruned_z2_line.setText(z2_str)
+        if self.pruned_y2_line.text() != y2_str:
+            self.pruned_y2_line.setText(y2_str)
             
         if self.hidden_pith_z_line.text() != z_str:
             self.hidden_pith_z_line.setText(z_str)
         if self.hidden_pith_y_line.text() != y_str:
             self.hidden_pith_y_line.setText(y_str)
+        if self.hidden_pruned_z2_line.text() != z2_str:
+            self.hidden_pruned_z2_line.setText(z2_str)
+        if self.hidden_pruned_y2_line.text() != y2_str:
+            self.hidden_pruned_y2_line.setText(y2_str)
         
         if getattr(self, '_last_pruned_state', None) is not None and self._last_pruned_state != is_pruned:
             self._last_pruned_state = is_pruned
@@ -456,7 +545,9 @@ class KnotsView:
         
         widgets = [
             self.pith_z_label, self.pith_z_line, self.pith_y_label, self.pith_y_line,
-            self.hidden_pith_z_label, self.hidden_pith_z_line, self.hidden_pith_y_label, self.hidden_pith_y_line
+            self.hidden_pith_z_label, self.hidden_pith_z_line, self.hidden_pith_y_label, self.hidden_pith_y_line,
+            self.pruned_z2_label, self.pruned_z2_line, self.pruned_y2_label, self.pruned_y2_line,
+            self.hidden_pruned_z2_label, self.hidden_pruned_z2_line, self.hidden_pruned_y2_label, self.hidden_pruned_y2_line
         ]
         
         def update_op(val):
@@ -507,6 +598,14 @@ class KnotsView:
         if "pith_y" in invalid_fields:
             _flash_label(self.pith_y_label)
             _flash_label(self.hidden_pith_y_label)
+            _flash_label(self.knot_msg)
+        if "pruned_z2" in invalid_fields:
+            _flash_label(self.pruned_z2_label)
+            _flash_label(self.hidden_pruned_z2_label)
+            _flash_label(self.knot_msg)
+        if "pruned_y2" in invalid_fields:
+            _flash_label(self.pruned_y2_label)
+            _flash_label(self.hidden_pruned_y2_label)
             _flash_label(self.knot_msg)
 
     def set_knot_editable(self, state: bool):

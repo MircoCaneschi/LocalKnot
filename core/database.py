@@ -117,8 +117,10 @@ class DatabaseManager:
                     pith_y INTEGER,
                     comment TEXT,
                     pruned_knot BOOLEAN,
-                    pruned_z INTEGER,
-                    pruned_y INTEGER,
+                    pruned_z1 INTEGER,
+                    pruned_y1 INTEGER,
+                    pruned_z2 INTEGER,
+                    pruned_y2 INTEGER,
                     
                     side1_z1 INTEGER,
                     side1_z2 INTEGER,
@@ -141,13 +143,26 @@ class DatabaseManager:
             ''')
             conn.commit()
 
-            # --- Migration: add pruned_z and pruned_y columns if needed ---
+            # --- Migration: rename and add pruned fields ---
             cursor.execute("PRAGMA table_info(knot)")
             col_names = [row[1] for row in cursor.fetchall()]
-            if 'pruned_z' not in col_names:
-                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_z INTEGER")
-            if 'pruned_y' not in col_names:
-                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_y INTEGER")
+            
+            if 'pruned_z' in col_names:
+                cursor.execute("ALTER TABLE knot RENAME COLUMN pruned_z TO pruned_z1")
+            if 'pruned_y' in col_names:
+                cursor.execute("ALTER TABLE knot RENAME COLUMN pruned_y TO pruned_y1")
+                
+            cursor.execute("PRAGMA table_info(knot)")
+            col_names = [row[1] for row in cursor.fetchall()]
+                
+            if 'pruned_z1' not in col_names:
+                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_z1 INTEGER")
+            if 'pruned_y1' not in col_names:
+                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_y1 INTEGER")
+            if 'pruned_z2' not in col_names:
+                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_z2 INTEGER")
+            if 'pruned_y2' not in col_names:
+                cursor.execute("ALTER TABLE knot ADD COLUMN pruned_y2 INTEGER")
             conn.commit()
 
 

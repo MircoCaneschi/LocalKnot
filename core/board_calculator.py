@@ -84,8 +84,10 @@ class BoardCalculator:
         std_k.pith_z = getattr(knot, 'pith_z', None)
         std_k.pith_y = getattr(knot, 'pith_y', None)
         std_k.is_pruned_knot = getattr(knot, 'is_pruned_knot', False)
-        std_k.pruned_z = getattr(knot, 'pruned_z', None)
-        std_k.pruned_y = getattr(knot, 'pruned_y', None)
+        std_k.pruned_z1 = getattr(knot, 'pruned_z1', None)
+        std_k.pruned_y1 = getattr(knot, 'pruned_y1', None)
+        std_k.pruned_z2 = getattr(knot, 'pruned_z2', None)
+        std_k.pruned_y2 = getattr(knot, 'pruned_y2', None)
         
         std_k.side1_dmin = knot.side1_dmin
         std_k.side2_dmin = knot.side2_dmin

@@ -414,36 +414,50 @@ class VirtualBoardView(QWidget):
                     unique_border_pts.append(pt)
 
             is_pruned = getattr(knot_obj, 'is_pruned_knot', False)
+            pith_points = []
             if is_pruned:
-                pith_z = getattr(knot_obj, 'pruned_z', None)
-                pith_y = getattr(knot_obj, 'pruned_y', None)
+                z1 = getattr(knot_obj, 'pruned_z1', None)
+                y1 = getattr(knot_obj, 'pruned_y1', None)
+                z2 = getattr(knot_obj, 'pruned_z2', None)
+                y2 = getattr(knot_obj, 'pruned_y2', None)
+                if z1 is not None and y1 is not None and z1 > 0 and y1 > 0:
+                    pith_points.append(QPointF(map_x(z1), map_y(y1)))
+                if z2 is not None and y2 is not None and z2 > 0 and y2 > 0:
+                    pith_points.append(QPointF(map_x(z2), map_y(y2)))
             else:
                 pith_z = getattr(knot_obj, 'pith_z', None)
                 pith_y = getattr(knot_obj, 'pith_y', None)
-            has_pith = (pith_z is not None and pith_z > 0) or (pith_y is not None and pith_y > 0)
-            pith_point = None
-            if has_pith and pith_z is not None and pith_y is not None:
-                pith_point = QPointF(map_x(pith_z), map_y(pith_y))
+                if pith_z is not None and pith_y is not None and pith_z > 0 and pith_y > 0:
+                    pith_points.append(QPointF(map_x(pith_z), map_y(pith_y)))
 
-            return unique_border_pts, pith_point
+            return unique_border_pts, pith_points
 
         def draw_knot_shape(knot_obj, brush, pen, pith_pen, pith_brush, z_value,
                             label=None, label_color=None):
             """Draw a knot cross-section on the scene with the given styling."""
-            border_pts, pith_point = build_knot_shape(knot_obj)
+            border_pts, pith_points = build_knot_shape(knot_obj)
             if border_pts is None:
                 return
 
-            if pith_point is not None:
+            if pith_points:
                 if len(border_pts) >= 2:
-                    poly = QPolygonF([pith_point] + border_pts)
+                    poly = QPolygonF(pith_points + border_pts)
                     item = self.scene.addPolygon(poly, pen, brush)
                     item.setZValue(z_value)
-                # Pith dot
-                pith_item = self.scene.addEllipse(-3, -3, 6, 6, pith_pen, pith_brush)
-                pith_item.setPos(pith_point)
-                pith_item.setFlag(pith_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
-                pith_item.setZValue(z_value + 1)
+                    
+                if len(pith_points) == 2:
+                    p_line = self.scene.addLine(
+                        pith_points[0].x(), pith_points[0].y(),
+                        pith_points[1].x(), pith_points[1].y(),
+                        pith_pen
+                    )
+                    p_line.setZValue(z_value + 1)
+
+                for pt in pith_points:
+                    pith_item = self.scene.addEllipse(-3, -3, 6, 6, pith_pen, pith_brush)
+                    pith_item.setPos(pt)
+                    pith_item.setFlag(pith_item.GraphicsItemFlag.ItemIgnoresTransformations, True)
+                    pith_item.setZValue(z_value + 2)
             else:
                 if len(border_pts) >= 3:
                     poly = QPolygonF(border_pts)
@@ -516,8 +530,10 @@ class VirtualBoardView(QWidget):
             proxy.pith_z   = vm.pith_z
             proxy.pith_y   = vm.pith_y
             proxy.is_pruned_knot = vm.is_pruned_knot
-            proxy.pruned_z = vm.pruned_z
-            proxy.pruned_y = vm.pruned_y
+            proxy.pruned_z1 = vm.pruned_z1
+            proxy.pruned_y1 = vm.pruned_y1
+            proxy.pruned_z2 = vm.pruned_z2
+            proxy.pruned_y2 = vm.pruned_y2
 
             selected_brush      = QBrush(QColor(139, 69, 19, 210))
             selected_pen        = QPen(QColor(80, 40, 10), 2.0)

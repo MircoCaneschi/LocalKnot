@@ -139,8 +139,10 @@ class Knot:
         pith_z (float): Pith Z coordinate
         pith_y (float): Pith Y coordinate
         is_pruned_knot (bool): Whether this is a pruned knot
-        pruned_z (int): Pruned Z coordinate
-        pruned_y (int): Pruned Y coordinate
+        pruned_z1 (int): Pruned Z1 coordinate
+        pruned_y1 (int): Pruned Y1 coordinate
+        pruned_z2 (int): Pruned Z2 coordinate
+        pruned_y2 (int): Pruned Y2 coordinate
         comment (str): Additional notes about the knot
         side1_z1 (int): Top z1 coordinate
         side1_z2 (int): Top z2 coordinate
@@ -158,7 +160,8 @@ class Knot:
 
     def __init__(self, knot_no: int | str, x: int = 0,
                  pith_z: int | None = None, pith_y: int | None = None,
-                 is_pruned_knot: bool = False, pruned_z: int | None = None, pruned_y: int | None = None, comment: str = "",
+                 is_pruned_knot: bool = False, pruned_z1: int | None = None, pruned_y1: int | None = None,
+                 pruned_z2: int | None = None, pruned_y2: int | None = None, comment: str = "",
                  side1_z1: int | None = None, side1_z2: int | None = None, side1_dmin: int | None = None,
                  side2_z1: int | None = None, side2_z2: int | None = None, side2_dmin: int | None = None,
                  side3_z1: int | None = None, side3_z2: int | None = None, side3_dmin: int | None = None,
@@ -172,8 +175,10 @@ class Knot:
             pith_z: Pith Z coordinate
             pith_y: Pith Y coordinate
             is_pruned_knot: Whether knot is pruned
-            pruned_z: Pruned Z coordinate
-            pruned_y: Pruned Y coordinate
+            pruned_z1: Pruned Z1 coordinate
+            pruned_y1: Pruned Y1 coordinate
+            pruned_z2: Pruned Z2 coordinate
+            pruned_y2: Pruned Y2 coordinate
             comment: Additional notes
         """
         self.knot_no = knot_no
@@ -181,8 +186,10 @@ class Knot:
         self.pith_z = pith_z
         self.pith_y = pith_y
         self.is_pruned_knot = is_pruned_knot
-        self.pruned_z = pruned_z
-        self.pruned_y = pruned_y
+        self.pruned_z1 = pruned_z1
+        self.pruned_y1 = pruned_y1
+        self.pruned_z2 = pruned_z2
+        self.pruned_y2 = pruned_y2
         self.comment = comment
         
         # Side parameters

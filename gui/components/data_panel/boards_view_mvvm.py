@@ -72,7 +72,7 @@ class BoardsView:
         """Create and layout all main panel UI components."""
         # main grid layout
         self.main_layout = QGridLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setContentsMargins(0, 15, 0, 0)
         self.main_layout.setSpacing(0)
 
         # sub-layouts in the grid
@@ -144,10 +144,11 @@ class BoardsView:
         self.board_msg.hide()
 
         # grid disposition
-        self.main_layout.addLayout(bottom_layout, 1, 0, 1, 1)
-        self.main_layout.addLayout(crud_layout, 1, 1, 3, 1)
-        self.main_layout.addLayout(data_layout, 0, 2, 6, 1)
-        self.main_layout.addWidget(self.board_msg, 4, 0, 1, 2)
+        from PySide6.QtCore import Qt
+        self.main_layout.addLayout(bottom_layout, 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addLayout(crud_layout, 0, 1, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addLayout(data_layout, 0, 2, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.main_layout.addWidget(self.board_msg, 1, 0, 1, 3)
 
     def _setup_hidden_layout(self):
         """Create and layout all hidden panel UI components."""
@@ -208,9 +209,10 @@ class BoardsView:
         hidden_data_layout.addLayout(length)
 
         # grid disposition
-        self.hidden_main_layout.addLayout(hidden_top_layout, 0, 1, 1, 1)
-        self.hidden_main_layout.addLayout(hidden_bottom_layout, 0, 0, 1, 1)
-        self.hidden_main_layout.addLayout(hidden_data_layout, 1, 0, 3, 2)
+        from PySide6.QtCore import Qt
+        self.hidden_main_layout.addLayout(hidden_top_layout, 0, 1, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.hidden_main_layout.addLayout(hidden_bottom_layout, 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
+        self.hidden_main_layout.addLayout(hidden_data_layout, 1, 0, 1, 2, Qt.AlignmentFlag.AlignTop)
 
     # ==================== BINDING ====================
 

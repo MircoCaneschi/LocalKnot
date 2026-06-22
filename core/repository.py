@@ -345,7 +345,7 @@ class KnotRepository:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id_nodo, id_board, x, pith_z, pith_y, comment, pruned_knot, pruned_z, pruned_y, "
+                "SELECT id_nodo, id_board, x, pith_z, pith_y, comment, pruned_knot, pruned_z1, pruned_y1, pruned_z2, pruned_y2, "
                 "side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, "
                 "side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin "
                 "FROM knot WHERE id_board = ? AND id_project = ?", 
@@ -355,11 +355,11 @@ class KnotRepository:
             return [
                 Knot(
                     knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_pruned_knot=row[6],
-                    pruned_z=row[7], pruned_y=row[8],
-                    side1_z1=row[9], side1_z2=row[10], side1_dmin=row[11],
-                    side2_z1=row[12], side2_z2=row[13], side2_dmin=row[14],
-                    side3_z1=row[15], side3_z2=row[16], side3_dmin=row[17],
-                    side4_z1=row[18], side4_z2=row[19], side4_dmin=row[20]
+                    pruned_z1=row[7], pruned_y1=row[8], pruned_z2=row[9], pruned_y2=row[10],
+                    side1_z1=row[11], side1_z2=row[12], side1_dmin=row[13],
+                    side2_z1=row[14], side2_z2=row[15], side2_dmin=row[16],
+                    side3_z1=row[17], side3_z2=row[18], side3_dmin=row[19],
+                    side4_z1=row[20], side4_z2=row[21], side4_dmin=row[22]
                 ) for row in rows
             ]
 
@@ -369,7 +369,7 @@ class KnotRepository:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "SELECT id_nodo, id_board, x, pith_z, pith_y, comment, pruned_knot, pruned_z, pruned_y, "
+                "SELECT id_nodo, id_board, x, pith_z, pith_y, comment, pruned_knot, pruned_z1, pruned_y1, pruned_z2, pruned_y2, "
                 "side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, "
                 "side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin "
                 "FROM knot WHERE id_nodo = ? AND id_board = ? AND id_project = ?", 
@@ -379,11 +379,11 @@ class KnotRepository:
             if row:
                 return Knot(
                     knot_no=row[0], x=row[2], pith_z=row[3], pith_y=row[4], comment=row[5], is_pruned_knot=row[6],
-                    pruned_z=row[7], pruned_y=row[8],
-                    side1_z1=row[9], side1_z2=row[10], side1_dmin=row[11],
-                    side2_z1=row[12], side2_z2=row[13], side2_dmin=row[14],
-                    side3_z1=row[15], side3_z2=row[16], side3_dmin=row[17],
-                    side4_z1=row[18], side4_z2=row[19], side4_dmin=row[20]
+                    pruned_z1=row[7], pruned_y1=row[8], pruned_z2=row[9], pruned_y2=row[10],
+                    side1_z1=row[11], side1_z2=row[12], side1_dmin=row[13],
+                    side2_z1=row[14], side2_z2=row[15], side2_dmin=row[16],
+                    side3_z1=row[17], side3_z2=row[18], side3_dmin=row[19],
+                    side4_z1=row[20], side4_z2=row[21], side4_dmin=row[22]
                 )
             return None
 
@@ -393,11 +393,11 @@ class KnotRepository:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT INTO knot (id_nodo, id_board, id_project, x, pith_z, pith_y, comment, pruned_knot, pruned_z, pruned_y, "
+                "INSERT INTO knot (id_nodo, id_board, id_project, x, pith_z, pith_y, comment, pruned_knot, pruned_z1, pruned_y1, pruned_z2, pruned_y2, "
                 "side1_z1, side1_z2, side1_dmin, side2_z1, side2_z2, side2_dmin, "
                 "side3_z1, side3_z2, side3_dmin, side4_z1, side4_z2, side4_dmin) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (knot.knot_no, board_id, project_id, knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_pruned_knot, knot.pruned_z, knot.pruned_y,
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (knot.knot_no, board_id, project_id, knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_pruned_knot, knot.pruned_z1, knot.pruned_y1, knot.pruned_z2, knot.pruned_y2,
                  knot.side1_z1, knot.side1_z2, knot.side1_dmin,
                  knot.side2_z1, knot.side2_z2, knot.side2_dmin,
                  knot.side3_z1, knot.side3_z2, knot.side3_dmin,
@@ -412,13 +412,13 @@ class KnotRepository:
         with self.db.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, pruned_knot = ?, pruned_z = ?, pruned_y = ?, "
+                "UPDATE knot SET x = ?, pith_z = ?, pith_y = ?, comment = ?, pruned_knot = ?, pruned_z1 = ?, pruned_y1 = ?, pruned_z2 = ?, pruned_y2 = ?, "
                 "side1_z1 = ?, side1_z2 = ?, side1_dmin = ?, "
                 "side2_z1 = ?, side2_z2 = ?, side2_dmin = ?, "
                 "side3_z1 = ?, side3_z2 = ?, side3_dmin = ?, "
                 "side4_z1 = ?, side4_z2 = ?, side4_dmin = ? "
                 "WHERE id_nodo = ? AND id_board = ? AND id_project = ?",
-                (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_pruned_knot, knot.pruned_z, knot.pruned_y,
+                (knot.x, knot.pith_z, knot.pith_y, knot.comment, knot.is_pruned_knot, knot.pruned_z1, knot.pruned_y1, knot.pruned_z2, knot.pruned_y2,
                  knot.side1_z1, knot.side1_z2, knot.side1_dmin,
                  knot.side2_z1, knot.side2_z2, knot.side2_dmin,
                  knot.side3_z1, knot.side3_z2, knot.side3_dmin,

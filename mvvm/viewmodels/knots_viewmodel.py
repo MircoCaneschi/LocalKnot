@@ -60,8 +60,10 @@ class KnotsViewModel(QObject):
         self._pith_z = None
         self._pith_y = None
         self._is_pruned_knot = False
-        self._pruned_z = None
-        self._pruned_y = None
+        self._pruned_z1 = None
+        self._pruned_y1 = None
+        self._pruned_z2 = None
+        self._pruned_y2 = None
         self._comment = ""
         self._side1_z1 = None
         self._side1_z2 = None
@@ -178,33 +180,57 @@ class KnotsViewModel(QObject):
             self._mark_dirty()
 
     @Property(object)
-    def pruned_z(self):
-        """Get the Pruned Z coordinate."""
-        return self._pruned_z
+    def pruned_z1(self):
+        return self._pruned_z1
 
-    @pruned_z.setter
-    def pruned_z(self, value):
-        """Set the Pruned Z coordinate."""
+    @pruned_z1.setter
+    def pruned_z1(self, value):
         try:
             val = None if not value and value != 0 else int(value)
-            if self._pruned_z != val:
-                self._pruned_z = val
+            if self._pruned_z1 != val:
+                self._pruned_z1 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
 
     @Property(object)
-    def pruned_y(self):
-        """Get the Pruned Y coordinate."""
-        return self._pruned_y
+    def pruned_y1(self):
+        return self._pruned_y1
 
-    @pruned_y.setter
-    def pruned_y(self, value):
-        """Set the Pruned Y coordinate."""
+    @pruned_y1.setter
+    def pruned_y1(self, value):
         try:
             val = None if not value and value != 0 else int(value)
-            if self._pruned_y != val:
-                self._pruned_y = val
+            if self._pruned_y1 != val:
+                self._pruned_y1 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(object)
+    def pruned_z2(self):
+        return self._pruned_z2
+
+    @pruned_z2.setter
+    def pruned_z2(self, value):
+        try:
+            val = None if not value and value != 0 else int(value)
+            if self._pruned_z2 != val:
+                self._pruned_z2 = val
+                self._mark_dirty()
+        except (ValueError, TypeError):
+            pass
+
+    @Property(object)
+    def pruned_y2(self):
+        return self._pruned_y2
+
+    @pruned_y2.setter
+    def pruned_y2(self, value):
+        try:
+            val = None if not value and value != 0 else int(value)
+            if self._pruned_y2 != val:
+                self._pruned_y2 = val
                 self._mark_dirty()
         except (ValueError, TypeError):
             pass
@@ -484,8 +510,10 @@ class KnotsViewModel(QObject):
         self._pith_z = None
         self._pith_y = None
         self._is_pruned_knot = False
-        self._pruned_z = None
-        self._pruned_y = None
+        self._pruned_z1 = None
+        self._pruned_y1 = None
+        self._pruned_z2 = None
+        self._pruned_y2 = None
         self._comment = ""
         self._side1_z1 = None
         self._side1_z2 = None
@@ -525,10 +553,15 @@ class KnotsViewModel(QObject):
                 error_messages_local.append("Field X must be greater than 0.")
                 
         if self._is_pruned_knot:
-            if self._pruned_z is None: invalid_fields_local.append("pith_z")
-            if self._pruned_y is None: invalid_fields_local.append("pith_y")
-            if "pith_z" in invalid_fields_local or "pith_y" in invalid_fields_local:
-                error_messages_local.append("Pruned Z and Pruned Y must be compiled and != 0 when pruned knot is selected.")
+            if (self._pruned_z1 is None and self._pruned_y1 is not None) or (self._pruned_z1 is not None and self._pruned_y1 is None):
+                if self._pruned_z1 is None and "pith_z" not in invalid_fields_local: invalid_fields_local.append("pith_z")
+                if self._pruned_y1 is None and "pith_y" not in invalid_fields_local: invalid_fields_local.append("pith_y")
+                error_messages_local.append("Both Pruned Z1 and Pruned Y1 must be compiled if one is provided.")
+                
+            if (self._pruned_z2 is None and self._pruned_y2 is not None) or (self._pruned_z2 is not None and self._pruned_y2 is None):
+                if self._pruned_z2 is None and "pruned_z2" not in invalid_fields_local: invalid_fields_local.append("pruned_z2")
+                if self._pruned_y2 is None and "pruned_y2" not in invalid_fields_local: invalid_fields_local.append("pruned_y2")
+                error_messages_local.append("Both Pruned Z2 and Pruned Y2 must be compiled if one is provided.")
         else:
             if (self._pith_z is None and self._pith_y is not None) or (self._pith_z is not None and self._pith_y is None):
                 if self._pith_z is None and "pith_z" not in invalid_fields_local: invalid_fields_local.append("pith_z")
@@ -553,7 +586,15 @@ class KnotsViewModel(QObject):
 
         # Check pith/pruned is inside the board
         if self._is_pruned_knot:
-            check_z, check_y, name = self._pruned_z, self._pruned_y, "Pruned"
+            check_z, check_y, name = self._pruned_z1, self._pruned_y1, "Pruned Z1/Y1"
+            if self._pruned_z2 is not None and self._pruned_z2 >= board_height:
+                self.knot_error.emit(f"Pruned Z2 ({self._pruned_z2}) must be less than board height ({board_height}).")
+                self.validation_failed.emit(["pruned_z2"])
+                return
+            if self._pruned_y2 is not None and self._pruned_y2 >= board_base:
+                self.knot_error.emit(f"Pruned Y2 ({self._pruned_y2}) must be less than board base ({board_base}).")
+                self.validation_failed.emit(["pruned_y2"])
+                return
         else:
             check_z, check_y, name = self._pith_z, self._pith_y, "Pith"
 
@@ -666,16 +707,20 @@ class KnotsViewModel(QObject):
                 self._pith_z = None
                 self._pith_y = None
             else:
-                self._pruned_z = None
-                self._pruned_y = None
+                self._pruned_z1 = None
+                self._pruned_y1 = None
+                self._pruned_z2 = None
+                self._pruned_y2 = None
             knot = Knot(
                 knot_no=knot_text,
                 x=self._x,
                 pith_z=self._pith_z,
                 pith_y=self._pith_y,
                 is_pruned_knot=self._is_pruned_knot,
-                pruned_z=self._pruned_z,
-                pruned_y=self._pruned_y,
+                pruned_z1=self._pruned_z1,
+                pruned_y1=self._pruned_y1,
+                pruned_z2=self._pruned_z2,
+                pruned_y2=self._pruned_y2,
                 comment=self._comment,
                 side1_z1=self._side1_z1, side1_z2=self._side1_z2, side1_dmin=self._side1_dmin,
                 side2_z1=self._side2_z1, side2_z2=self._side2_z2, side2_dmin=self._side2_dmin,
@@ -772,8 +817,10 @@ class KnotsViewModel(QObject):
                 self._pith_z = knot.pith_z
                 self._pith_y = knot.pith_y
                 self._is_pruned_knot = knot.is_pruned_knot
-                self._pruned_z = knot.pruned_z
-                self._pruned_y = knot.pruned_y
+                self._pruned_z1 = knot.pruned_z1
+                self._pruned_y1 = knot.pruned_y1
+                self._pruned_z2 = knot.pruned_z2
+                self._pruned_y2 = knot.pruned_y2
                 self._comment = knot.comment
                 self._side1_z1 = knot.side1_z1
                 self._side1_z2 = knot.side1_z2
@@ -835,8 +882,10 @@ class KnotsViewModel(QObject):
                 self._pith_z = knot.pith_z
                 self._pith_y = knot.pith_y
                 self._is_pruned_knot = knot.is_pruned_knot
-                self._pruned_z = knot.pruned_z
-                self._pruned_y = knot.pruned_y
+                self._pruned_z1 = knot.pruned_z1
+                self._pruned_y1 = knot.pruned_y1
+                self._pruned_z2 = knot.pruned_z2
+                self._pruned_y2 = knot.pruned_y2
                 self._comment = knot.comment
                 self._side1_z1 = knot.side1_z1
                 self._side1_z2 = knot.side1_z2
