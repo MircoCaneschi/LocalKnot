@@ -107,17 +107,26 @@ class VirtualBoardView(QWidget):
         # Positioning in the grid
         # row 0: empty, top, empty
         # row 1: left, center, right
-        # row 2: empty, bottom, empty
+        # row 2: empty, board_length, empty
+        # row 3: empty, bottom, empty
         grid_layout.addWidget(top_widget, 0, 1, alignment=Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
         grid_layout.addWidget(left_widget, 1, 0, alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         grid_layout.addWidget(self.graphics_view, 1, 1)
         grid_layout.addWidget(right_widget, 1, 2, alignment=Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        grid_layout.addWidget(bottom_widget, 2, 1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+        
+        # Board Length View (placed under graphics_view)
+        from gui.components.board_length_view import BoardLengthView
+        self.board_length_view = BoardLengthView(self.knots_vm)
+        self.board_length_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        grid_layout.addWidget(self.board_length_view, 2, 1)
+        
+        grid_layout.addWidget(bottom_widget, 3, 1, alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
         # Set stretches to ensure the graphics view gets all available extra space
         grid_layout.setRowStretch(0, 0)
         grid_layout.setRowStretch(1, 1)
         grid_layout.setRowStretch(2, 0)
+        grid_layout.setRowStretch(3, 0)
         
         grid_layout.setColumnStretch(0, 0)
         grid_layout.setColumnStretch(1, 1)
