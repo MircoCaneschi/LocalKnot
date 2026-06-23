@@ -405,8 +405,7 @@ class ProjectsView:
         # Sync Current Text (Main and Hidden)
         self.view_model.current_species_changed.connect(self._on_current_species_changed)
         
-        self.view_model.current_project_changed.connect(self.combo_box_projects.setCurrentText)
-        self.view_model.current_project_changed.connect(self.hidden_combo_box_projects.setCurrentText)
+        self.view_model.current_project_changed.connect(self._on_current_project_changed)
 
         # Force initial UI update from ViewModel state
         self._on_projects_changed(self.view_model.project_list)
@@ -455,6 +454,7 @@ class ProjectsView:
         # Always sync with current selection from ViewModel
         self.combo_box_projects.setCurrentText(self.view_model.current_project)
         self.combo_box_projects.blockSignals(False)
+        self._update_shift_buttons_state()
 
     def _on_hidden_projects_changed(self, projects: list):
         """Intelligently updates hidden combo box without clearing."""
@@ -468,6 +468,7 @@ class ProjectsView:
             
         self.hidden_combo_box_projects.setCurrentText(self.view_model.current_project)
         self.hidden_combo_box_projects.blockSignals(False)
+        self._update_shift_buttons_state()
 
     def _on_species_changed(self, species: list):
         """Updates main combo box with new species list."""
@@ -593,6 +594,7 @@ class ProjectsView:
         self.combo_box_projects.blockSignals(False)
         self.hidden_combo_box_projects.blockSignals(False)
         self._update_shift_buttons_state()
+        self._update_shift_buttons_state()
 
     def set_species_editable(self, state: bool):
         """Check if species combo is editable."""
@@ -612,12 +614,19 @@ class ProjectsView:
         self._update_shift_buttons_state()
 
     def _update_shift_buttons_state(self):
-        """Update the enabled state of the shift buttons based on editing state."""
+        """Update the enabled state of the shift buttons based on editing state and list limits."""
         is_editing = self.combo_box_projects.isEditable() or self.combo_box_species.isEditable()
-        self.right_shift_btn.setEnabled(not is_editing)
-        self.left_shift_btn.setEnabled(not is_editing)
-        self.hidden_right_shift_btn.setEnabled(not is_editing)
-        self.hidden_left_shift_btn.setEnabled(not is_editing)
+        
+        count = self.combo_box_projects.count()
+        current_index = self.combo_box_projects.currentIndex()
+        
+        prev_enabled = not is_editing and count > 1 and current_index > 0
+        next_enabled = not is_editing and count > 1 and current_index < count - 1
+
+        self.right_shift_btn.setEnabled(prev_enabled)
+        self.left_shift_btn.setEnabled(next_enabled)
+        self.hidden_right_shift_btn.setEnabled(prev_enabled)
+        self.hidden_left_shift_btn.setEnabled(next_enabled)
 
     def set_species_enabled(self, state: bool):
         """
@@ -634,12 +643,23 @@ class ProjectsView:
         self.change_name_btn.setEnabled(enabled)
         self.delete_btn.setEnabled(enabled)
 
+    def _on_current_project_changed(self, text: str):
+        """Update combo boxes and button states when current project changes."""
+        self.combo_box_projects.blockSignals(True)
+        self.hidden_combo_box_projects.blockSignals(True)
+        self.combo_box_projects.setCurrentText(text)
+        self.hidden_combo_box_projects.setCurrentText(text)
+        self.combo_box_projects.blockSignals(False)
+        self.hidden_combo_box_projects.blockSignals(False)
+        self._update_shift_buttons_state()
+
     def _on_project_selection_changed(self, text: str):
         # Update the ViewModel
         self.view_model.current_project = text
         # read the species and update the UI
         new_species = self.view_model.current_species
         self.combo_box_species.setCurrentText(new_species)
+        self._update_shift_buttons_state()
 
     def _on_delete_clicked(self):
         """Handle delete button click with confirmation."""

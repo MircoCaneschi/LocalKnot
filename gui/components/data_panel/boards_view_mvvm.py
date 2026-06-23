@@ -8,11 +8,48 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QFormLayout, QHBoxLayout, QGridLayout, QPushButton,
     QComboBox, QLineEdit, QLabel, QSizePolicy, QMessageBox
 )
-from PySide6.QtCore import Qt, QRegularExpression
+from PySide6.QtCore import Qt, QRegularExpression, QObject
 from PySide6.QtGui import QIntValidator, QRegularExpressionValidator
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import BoardsViewModel
+
+
+class ComboInteractionFilter(QObject):
+    """Filters events to prevent opening the combo box while keeping it visually enabled."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.is_enabled = True
+        self.is_editing_inline = False
+
+    def eventFilter(self, obj, event):
+        from PySide6.QtCore import QEvent, Qt
+        # 1. In-Line Editing Mode: Allow typing, block dropdown popup
+        if self.is_editing_inline:
+            if event.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick]:
+                if isinstance(obj, QComboBox) and obj.isEditable():
+                    # Allow clicks ONLY if they are inside the lineEdit area (for cursor/focus)
+                    if obj.lineEdit().geometry().contains(event.pos()):
+                        return False
+                # Block clicks on the arrow/button area
+                return True
+            
+            if event.type() == QEvent.Type.KeyPress:
+                # Block keys that navigate or open the popup
+                if event.key() in [Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_F4]:
+                    return True
+                # Allow all other keys (character input, backspace, enter, etc.)
+                return False
+            return False
+
+        # 2. Locked Mode (Navigation): Block all interactions
+        if not self.is_enabled:
+            if event.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, 
+                               QEvent.Type.MouseButtonDblClick, QEvent.Type.KeyPress]:
+                return True
+        
+        # 3. Enabled Mode: Normal behavior
+        return super().eventFilter(obj, event)
 
 
 class BoardsView:
@@ -61,6 +98,12 @@ class BoardsView:
 
         # Bind ViewModel
         self._bind_to_view_model()
+        
+        # Event Filters for ComboBoxes (to keep them sharp when locked/editing)
+        self.board_filter = ComboInteractionFilter()
+        self.hidden_board_filter = ComboInteractionFilter()
+        self.board_no_combo.installEventFilter(self.board_filter)
+        self.hidden_board_no_combo.installEventFilter(self.hidden_board_filter)
         
         # Initial states
         self.save_btn.setEnabled(False)
@@ -305,6 +348,8 @@ class BoardsView:
         has_project = bool(self.view_model._current_project)
         is_editable = self.view_model._board_editable
         self.new_btn.setEnabled(has_project and not is_editable)
+        
+        self._update_shift_buttons_state()
 
     def _on_board_data_changed(self):
         """Update UI when ViewModel board data changes."""
@@ -384,9 +429,11 @@ class BoardsView:
             if widget:
                 widget.setEnabled(has_board)
                 
-        # Force save button disabled if no board is selected
-        if not has_board:
+        # Force save button disabled if no board is selected (unless we are creating a new one)
+        if not has_board and not getattr(self.view_model, '_board_editable', False):
             self.save_btn.setEnabled(False)
+            
+        self._update_shift_buttons_state()
 
     def _on_validation_failed(self, invalid_fields: list):
         """Flash the labels of the invalid fields."""
@@ -426,6 +473,10 @@ class BoardsView:
         self.hidden_board_no_combo.setEditable(state)
         
         if state:
+            self.board_filter.is_editing_inline = True
+            self.hidden_board_filter.is_editing_inline = True
+            self.board_no_combo.setCompleter(None)
+            self.hidden_board_no_combo.setCompleter(None)
             self.board_no_combo.setValidator(QIntValidator(1, 999999))
             self.hidden_board_no_combo.setValidator(QIntValidator(1, 999999))
             self.board_no_combo.setFocus()
@@ -433,6 +484,8 @@ class BoardsView:
                 self.board_no_combo.lineEdit().selectAll()
         
         if not state:
+            self.board_filter.is_editing_inline = False
+            self.hidden_board_filter.is_editing_inline = False
             self.board_no_combo.setCurrentText(self.view_model.current_board_no)
             self.hidden_board_no_combo.setCurrentText(self.view_model.current_board_no)
             
@@ -445,8 +498,20 @@ class BoardsView:
         has_project = bool(self.view_model._current_project)
         self.new_btn.setEnabled(has_project and not state)
         
-        self.left_shift_btn.setEnabled(not state)
-        self.right_shift_btn.setEnabled(not state)
-        self.hidden_left_shift_btn.setEnabled(not state)
-        self.hidden_right_shift_btn.setEnabled(not state)
+        self._update_shift_buttons_state()
+
+    def _update_shift_buttons_state(self):
+        """Update the enabled state of the shift buttons based on editing state and list limits."""
+        is_editing = getattr(self.view_model, '_board_editable', False)
+        
+        count = self.board_no_combo.count()
+        current_index = self.board_no_combo.currentIndex()
+        
+        prev_enabled = not is_editing and count > 1 and current_index > 0
+        next_enabled = not is_editing and count > 1 and current_index < count - 1
+
+        self.right_shift_btn.setEnabled(prev_enabled)
+        self.left_shift_btn.setEnabled(next_enabled)
+        self.hidden_right_shift_btn.setEnabled(prev_enabled)
+        self.hidden_left_shift_btn.setEnabled(next_enabled)
 

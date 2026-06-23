@@ -9,10 +9,47 @@ from PySide6.QtWidgets import (
     QComboBox, QLineEdit, QCheckBox, QLabel, QMessageBox, QSizePolicy
 )
 from PySide6.QtGui import QIntValidator
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QObject
 
 from gui.components.common_widgets import create_shift_buttons
 from mvvm.viewmodels import KnotsViewModel
+
+
+class ComboInteractionFilter(QObject):
+    """Filters events to prevent opening the combo box while keeping it visually enabled."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.is_enabled = True
+        self.is_editing_inline = False
+
+    def eventFilter(self, obj, event):
+        from PySide6.QtCore import QEvent, Qt
+        # 1. In-Line Editing Mode: Allow typing, block dropdown popup
+        if self.is_editing_inline:
+            if event.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonDblClick]:
+                if isinstance(obj, QComboBox) and obj.isEditable():
+                    # Allow clicks ONLY if they are inside the lineEdit area (for cursor/focus)
+                    if obj.lineEdit().geometry().contains(event.pos()):
+                        return False
+                # Block clicks on the arrow/button area
+                return True
+            
+            if event.type() == QEvent.Type.KeyPress:
+                # Block keys that navigate or open the popup
+                if event.key() in [Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_F4]:
+                    return True
+                # Allow all other keys (character input, backspace, enter, etc.)
+                return False
+            return False
+
+        # 2. Locked Mode (Navigation): Block all interactions
+        if not self.is_enabled:
+            if event.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, 
+                               QEvent.Type.MouseButtonDblClick, QEvent.Type.KeyPress]:
+                return True
+        
+        # 3. Enabled Mode: Normal behavior
+        return super().eventFilter(obj, event)
 
 
 class KnotsView:
@@ -73,6 +110,12 @@ class KnotsView:
 
         # Bind ViewModel
         self._bind_to_view_model()
+        
+        # Event Filters for ComboBoxes (to keep them sharp when locked/editing)
+        self.knot_filter = ComboInteractionFilter()
+        self.hidden_knot_filter = ComboInteractionFilter()
+        self.knot_no_combo.installEventFilter(self.knot_filter)
+        self.hidden_knot_no_combo.installEventFilter(self.hidden_knot_filter)
         
         # Initial states
         self.save_btn.setEnabled(False)
@@ -379,6 +422,8 @@ class KnotsView:
         is_editable = self.view_model._knot_editable
         self.new_btn.setEnabled(has_board and not is_editable)
 
+        self._update_shift_buttons_state()
+
     def _on_knot_data_changed(self):
         """Update UI when ViewModel knot data changes."""
         line_edits = [
@@ -533,6 +578,8 @@ class KnotsView:
         if not has_knot:
             self.save_btn.setEnabled(False)
 
+        self._update_shift_buttons_state()
+
     def _trigger_pruned_animation(self):
         """Play a smooth fade-in animation on the fields when toggling pruned knot."""
         from PySide6.QtCore import QVariantAnimation
@@ -613,6 +660,9 @@ class KnotsView:
         The knot combo is always non-editable (IDs are auto-assigned)."""
         self.knot_no_combo.blockSignals(True)
         self.hidden_knot_no_combo.blockSignals(True)
+        
+        self.knot_filter.is_enabled = not state
+        self.hidden_knot_filter.is_enabled = not state
 
         if not state:
             self.knot_no_combo.setCurrentText(self.view_model.current_knot_no)
@@ -630,8 +680,20 @@ class KnotsView:
         has_board = bool(self.view_model._current_board)
         self.new_btn.setEnabled(has_board and not state)
 
-        self.left_shift_btn.setEnabled(not state)
-        self.right_shift_btn.setEnabled(not state)
-        self.hidden_left_shift_btn.setEnabled(not state)
-        self.hidden_right_shift_btn.setEnabled(not state)
+        self._update_shift_buttons_state()
+
+    def _update_shift_buttons_state(self):
+        """Update the enabled state of the shift buttons based on editing state and list limits."""
+        is_editing = getattr(self.view_model, '_knot_editable', False)
+        
+        count = self.knot_no_combo.count()
+        current_index = self.knot_no_combo.currentIndex()
+        
+        prev_enabled = not is_editing and count > 1 and current_index > 0
+        next_enabled = not is_editing and count > 1 and current_index < count - 1
+
+        self.right_shift_btn.setEnabled(prev_enabled)
+        self.left_shift_btn.setEnabled(next_enabled)
+        self.hidden_right_shift_btn.setEnabled(prev_enabled)
+        self.hidden_left_shift_btn.setEnabled(next_enabled)
 

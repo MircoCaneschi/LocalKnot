@@ -69,9 +69,16 @@ class BoardsViewModel(QObject):
         """Set the current board number."""
         if self._current_board_no != value:
             self._current_board_no = value
-            self.current_board_changed.emit(value)
+            
+            # Emit signal to clear UI when creating new, or when normally navigating
+            if not self._board_editable or value == "":
+                self.current_board_changed.emit(value)
+                
             if not self._board_editable:
                 self.handle_board_selected(value)
+            else:
+                if value:
+                    self.save_enabled_changed.emit(True)
 
     @Property(object)
     def height(self):
@@ -330,6 +337,7 @@ class BoardsViewModel(QObject):
                     
                     self._board_editable = False
                     self.board_editable_changed.emit(False)
+                    self.current_board_changed.emit(self._current_board_no)
                     self.handle_board_selected(self._current_board_no)
             else:
                 # Modifying an existing board
