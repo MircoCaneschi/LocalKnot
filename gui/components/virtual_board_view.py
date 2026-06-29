@@ -40,6 +40,7 @@ class VirtualBoardView(QWidget):
         # Validator to accept only integers
         validator = QIntValidator()
         self.inputs = {}
+        self.side_labels = {}
 
         # Helper function to create a group of 3 line edits (z1, z2, dmin)
         def create_side_inputs(side_name, orientation="horizontal"):
@@ -88,6 +89,7 @@ class VirtualBoardView(QWidget):
                     group_inputs[field] = line_edit
                 outer.addLayout(layout)
                     
+            self.side_labels[side_name] = side_label
             self.inputs[side_name] = group_inputs
             return container
 
@@ -622,5 +624,12 @@ class VirtualBoardView(QWidget):
 
         for side, group in self.inputs.items():
             prefix = side.split("_")[0]
+            side_has_error = False
             for field, le in group.items():
                 prop_name = f"{prefix}_{field}"
+                if prop_name in invalid_fields:
+                    _flash_widget(le)
+                    side_has_error = True
+            
+            if side_has_error and side in self.side_labels:
+                _flash_widget(self.side_labels[side])

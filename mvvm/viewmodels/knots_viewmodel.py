@@ -552,6 +552,31 @@ class KnotsViewModel(QObject):
                 invalid_fields_local.append("X")
                 error_messages_local.append("Field X must be greater than 0.")
                 
+        # Ensure at least 2 sides, or 1 side + pith/pruned
+        compiled_sides = 0
+        empty_side_fields = []
+        for side in range(1, 5):
+            z1 = getattr(self, f'_side{side}_z1')
+            z2 = getattr(self, f'_side{side}_z2')
+            dmin = getattr(self, f'_side{side}_dmin')
+            if z1 is not None or z2 is not None or dmin is not None:
+                compiled_sides += 1
+            else:
+                empty_side_fields.extend([f'side{side}_z1', f'side{side}_z2', f'side{side}_dmin'])
+
+        has_pith_pruned = False
+        if self._is_pruned_knot:
+            if self._pruned_z1 is not None or self._pruned_y1 is not None or self._pruned_z2 is not None or self._pruned_y2 is not None:
+                has_pith_pruned = True
+        else:
+            if self._pith_z is not None or self._pith_y is not None:
+                has_pith_pruned = True
+
+        valid_sides = (compiled_sides >= 2) or (compiled_sides >= 1 and has_pith_pruned)
+        if not valid_sides:
+            invalid_fields_local.extend(empty_side_fields)
+            error_messages_local.append("Insert knot's coordinates first.")
+
         if self._is_pruned_knot:
             if (self._pruned_z1 is None and self._pruned_y1 is not None) or (self._pruned_z1 is not None and self._pruned_y1 is None):
                 if self._pruned_z1 is None and "pith_z" not in invalid_fields_local: invalid_fields_local.append("pith_z")
@@ -571,6 +596,10 @@ class KnotsViewModel(QObject):
         if invalid_fields_local:
             self.knot_error.emit("\n".join(error_messages_local))
             self.validation_failed.emit(invalid_fields_local)
+            
+            vb_fields = [f for f in invalid_fields_local if f.startswith('side')]
+            if vb_fields:
+                self.virtual_board_error.emit("Insert knot's coordinates first.")
             return
 
         board = None
