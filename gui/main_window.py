@@ -16,7 +16,42 @@ from mvvm.viewmodels.virtual_board_vm import VirtualBoardViewModel
 from gui.components.virtual_board_view import VirtualBoardView
 from gui.components.knot_results_view import KnotResultsView
 from core.export_manager import ExportManager
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QScrollBar
+
+class FloatingScrollArea(QScrollArea):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        self.floating_scrollbar = QScrollBar(Qt.Orientation.Vertical, self)
+        
+
+        real_sb = self.verticalScrollBar()
+        real_sb.rangeChanged.connect(self.floating_scrollbar.setRange)
+        real_sb.valueChanged.connect(self.floating_scrollbar.setValue)
+        self.floating_scrollbar.valueChanged.connect(real_sb.setValue)
+        
+        # Sync pageStep so the scrollbar handle has the correct proportional size
+        def sync_page_step(*args):
+            self.floating_scrollbar.setPageStep(real_sb.pageStep())
+            
+        real_sb.rangeChanged.connect(sync_page_step)
+        sync_page_step()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        sb_width = self.floating_scrollbar.sizeHint().width()
+        if sb_width <= 0:
+            sb_width = 14  # fallback
+        self.floating_scrollbar.setGeometry(
+            self.width() - sb_width,
+            0,
+            sb_width,
+            self.height()
+        )
+        self.floating_scrollbar.raise_()
+import sys
+import ctypes
 
 class MainWindow(QMainWindow):
     """Main application window with MVVM architecture."""
@@ -26,8 +61,32 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("LocalKnot - MVVM Architecture")
 
         self.resize(1000, 700)
+        self._set_custom_titlebar_color()
+
+    def _set_custom_titlebar_color(self):
+        # Set the native Windows 11 title bar color
+        if sys.platform == "win32":
+            try:
+                hwnd = int(self.winId())
+                DWMWA_CAPTION_COLOR = 35
+                DWMWA_TEXT_COLOR = 36
+                
+                # Color #0c1230 in COLORREF format (0x00bbggrr)
+                # R=12 (0c), G=18 (12), B=48 (30) -> 0x0030120c
+                bg_color = 0x0030120c
+                text_color = 0x00FFFFFF # White
+                
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, DWMWA_CAPTION_COLOR,
+                    ctypes.byref(ctypes.c_int(bg_color)), 4)
+                
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    hwnd, DWMWA_TEXT_COLOR,
+                    ctypes.byref(ctypes.c_int(text_color)), 4)
+            except Exception as e:
+                print("Failed to set title bar color:", e)
         
-        self.scroll_area = QScrollArea()
+        self.scroll_area = FloatingScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setFrameShape(QScrollArea.Shape.NoFrame)
         
@@ -37,6 +96,8 @@ class MainWindow(QMainWindow):
 
         # Main vertical layout
         self.main_layout = QVBoxLayout(central_widget)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(0)
 
         # ==================== Setup MVVM Components ====================
 
@@ -64,7 +125,9 @@ class MainWindow(QMainWindow):
 
         # Toolbar with toggle button
         toolbar_layout = QHBoxLayout()
+        toolbar_layout.setContentsMargins(9, 0, 18, 5)
         self.toggle_panel_btn = QPushButton("Toggle Data Panel")
+        self.toggle_panel_btn.setObjectName("ToggleDataPanelBtn")
         self.toggle_panel_btn.clicked.connect(self._toggle_data_panel)
         toolbar_layout.addWidget(self.toggle_panel_btn)
         self.main_layout.addLayout(toolbar_layout)
@@ -72,12 +135,12 @@ class MainWindow(QMainWindow):
         # Data panel container
         self.data_panel_container = QWidget()
         self.data_panel_layout = QHBoxLayout(self.data_panel_container)
-        self.data_panel_layout.setContentsMargins(9, 9, 9, 0)
+        self.data_panel_layout.setContentsMargins(9, 9, 18, 9)
 
         # Add all views to their QGroupBox
-        self.project_group = QGroupBox(f"Projects[{self.projects_view.combo_box_projects.count()}]")
-        self.board_group = QGroupBox(f"Boards[{self.boards_view.board_no_combo.count()}]")
-        self.knot_group = QGroupBox(f"Knots[{self.knots_view.knot_no_combo.count()}]")
+        self.project_group = QGroupBox(f"PROJECTS [{self.projects_view.combo_box_projects.count()}]")
+        self.board_group = QGroupBox(f"BOARDS[{self.boards_view.board_no_combo.count()}]")
+        self.knot_group = QGroupBox(f"KNOTS[{self.knots_view.knot_no_combo.count()}]")
 
         self.project_group.setLayout(self.projects_view.main_layout)
         self.board_group.setLayout(self.boards_view.main_layout)
@@ -109,12 +172,12 @@ class MainWindow(QMainWindow):
         # Hidden panel (compact view)
         self.hidden_data_panel_container = QWidget()
         self.hidden_data_panel_layout = QHBoxLayout(self.hidden_data_panel_container)
-        self.hidden_data_panel_layout.setContentsMargins(9, 9, 9, 0)
+        self.hidden_data_panel_layout.setContentsMargins(9, 9, 18, 9)
 
         # Hidden groupBox
-        self.hidden_project_group = QGroupBox(f"Projects[{self.projects_view.combo_box_projects.count()}]")
-        self.hidden_board_group = QGroupBox(f"Boards[{self.boards_view.board_no_combo.count()}]")
-        self.hidden_knot_group = QGroupBox(f"Knots[{self.knots_view.knot_no_combo.count()}]")
+        self.hidden_project_group = QGroupBox(f"PROJECTS[{self.projects_view.combo_box_projects.count()}]")
+        self.hidden_board_group = QGroupBox(f"BOARDS[{self.boards_view.board_no_combo.count()}]")
+        self.hidden_knot_group = QGroupBox(f"KNOTS[{self.knots_view.knot_no_combo.count()}]")
 
         self.hidden_project_group.setLayout(self.projects_view.hidden_main_layout)
         self.hidden_board_group.setLayout(self.boards_view.hidden_main_layout)
@@ -301,17 +364,17 @@ class MainWindow(QMainWindow):
     def _update_project_counter(self, projects: list):
         """Update the counter in the project group box title."""
         count = len(projects)
-        self.project_group.setTitle(f"Projects[{count}]")
-        self.hidden_project_group.setTitle(f"Projects[{count}]")
+        self.project_group.setTitle(f"PROJECTS [{count}]")
+        self.hidden_project_group.setTitle(f"PROJECTS [{count}]")
 
     def _update_board_counter(self, boards: list):
         """Update the counter in the board group box title."""
         count = len(boards)
-        self.board_group.setTitle(f"Boards[{count}]")
-        self.hidden_board_group.setTitle(f"Boards[{count}]")
+        self.board_group.setTitle(f"BOARDS [{count}]")
+        self.hidden_board_group.setTitle(f"BOARDS [{count}]")
 
     def _update_knot_counter(self, knots: list):
         """Update the counter in the knot group box title."""
         count = len(knots)
-        self.knot_group.setTitle(f"Knots[{count}]")
-        self.hidden_knot_group.setTitle(f"Knots[{count}]")
+        self.knot_group.setTitle(f"KNOTS [{count}]")
+        self.hidden_knot_group.setTitle(f"KNOTS [{count}]")

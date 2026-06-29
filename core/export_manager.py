@@ -42,7 +42,7 @@ class ExportManager:
         for board in boards:
             knots = self.knot_repo.get_all_knots(board.board_no, project_id)
             
-            # Formattazione per la tavola
+            # Formatting for the board
             no_board = self._val_str(board.board_no)
             thick = self._val_str(board.base)
             width = self._val_str(board.height)
@@ -51,7 +51,7 @@ class ExportManager:
             b_comment = self._val_str(board.comment)
 
             if not knots:
-                # Se non ci sono nodi, esporto solo i dati della tavola e lascio i campi del nodo vuoti
+                # If there are no knots, export only board data and leave knot fields empty
                 line = (
                     f"{no_board};;;;;;;;;;;;;;;"  # No_Knot to x_tKAR, SplayKnot
                     f";{b_comment};{thick};{width};{length};{testpos};;;;"  # Pith, Pith_Y, Pith_Z
@@ -62,10 +62,10 @@ class ExportManager:
                 continue
 
             for knot in knots:
-                # Ottengo i parametri calcolati
-                # Nota: calculate_knot_results internamente converte i nodi in standard mode per i calcoli.
-                # Ma restituisce solo i parametri (tKnot, DEB ecc). 
-                # Per esportare i valori Z1/Z2 in standard mode, usiamo il metodo _to_standard_knot.
+                # Get calculated parameters
+                # Note: calculate_knot_results internally converts knots to standard mode for calculations.
+                # But it only returns the parameters (tKnot, DEB, etc.).
+                # To export Z1/Z2 values in standard mode, we use the _to_standard_knot method.
                 std_knot = self.calculator._to_standard_knot(knot, board)
                 res = self.calculator.calculate_knot_results(board, knots, knot)
 
@@ -119,7 +119,7 @@ class ExportManager:
                     f"{pruned};{pruned_y1};{pruned_z1};{pruned_y2};{pruned_z2};"
                 )
                 
-                # Sostituisco i N/A con stringa vuota per uniformità con java
+                # Replace N/A with empty string for uniformity with java
                 line = line.replace("N/A", "")
                 lines.append(line)
 

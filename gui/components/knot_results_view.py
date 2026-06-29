@@ -149,7 +149,7 @@ class KnotResultsView(QWidget):
     def setup_ui(self):
         # Main layout
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(9, 0, 18, 0)
         main_layout.setSpacing(0) # No spacing between divider and button
         
         # Horizontal divider line

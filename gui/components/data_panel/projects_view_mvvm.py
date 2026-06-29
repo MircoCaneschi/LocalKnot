@@ -163,6 +163,8 @@ class ProjectsView:
         new_del_layout.addWidget(self.change_name_btn, 1)
         new_del_layout.addWidget(self.save_btn, 1)
         new_del_layout.setSpacing(2)
+        new_del_layout.setContentsMargins(0, 6, 0, 0)
+        
         spacer_nd = QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         new_del_layout.addItem(spacer_nd)
 

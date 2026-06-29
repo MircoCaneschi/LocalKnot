@@ -35,7 +35,7 @@ class VirtualBoardView(QWidget):
         
         # --- GRAPHICS GRID AND INPUT ---
         grid_layout = QGridLayout()
-        grid_layout.setContentsMargins(0, 0, 0, 0)
+        grid_layout.setContentsMargins(0, 0, 18, 0)
         
         # Validator to accept only integers
         validator = QIntValidator()
@@ -348,7 +348,7 @@ class VirtualBoardView(QWidget):
         # offset the pith origin outward along the bisector to avoid overlapping blue arrows
         _ox = hight + _gap * 2.5
         _oy = base + _gap * 2.5
-        _dist = 1  # Distanza ridotta per tenere il testo più vicino alla freccia
+        _dist = 1  # Reduced distance to keep text closer to the arrow
         
         # Horizontal arrow → left (pith_z); label just below midpoint
         _draw_pith_axis(
