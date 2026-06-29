@@ -422,12 +422,14 @@ class BoardsView:
         self._on_validation_failed([])
 
         # Enable/Disable input fields depending on if there is an active board
+        # Or if we are in edit mode (creating a new board)
         has_board = bool(text)
+        is_editable = getattr(self.view_model, '_board_editable', False)
         for widget in [self.height_line, self.base_line, self.length_line, 
                        self.testpos_line, self.comment_line,
                        self.hidden_height_line, self.hidden_base_line, self.hidden_length_line]:
             if widget:
-                widget.setEnabled(has_board)
+                widget.setEnabled(has_board or is_editable)
                 
         # Force save button disabled if no board is selected (unless we are creating a new one)
         if not has_board and not getattr(self.view_model, '_board_editable', False):
@@ -497,6 +499,15 @@ class BoardsView:
         
         has_project = bool(self.view_model._current_project)
         self.new_btn.setEnabled(has_project and not state)
+        
+        # Explicitly force fields to be enabled if we enter edit mode,
+        # or disable them if we exit edit mode and have no board selected.
+        has_board = bool(self.view_model.current_board_no)
+        for widget in [self.height_line, self.base_line, self.length_line, 
+                       self.testpos_line, self.comment_line,
+                       self.hidden_height_line, self.hidden_base_line, self.hidden_length_line]:
+            if widget:
+                widget.setEnabled(has_board or state)
         
         self._update_shift_buttons_state()
 
