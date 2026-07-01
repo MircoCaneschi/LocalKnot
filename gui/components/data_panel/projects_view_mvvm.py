@@ -574,7 +574,7 @@ class ProjectsView:
                 project_name = new_name.strip()
 
             # Handle missing species
-            species = self.view_model.guess_species(project_name)
+            species = self.view_model.guess_species(file_path, project_name)
             if not species:
                 species_input, ok = QInputDialog.getText(
                     self.import_btn.window(),

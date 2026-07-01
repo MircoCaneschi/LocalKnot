@@ -616,16 +616,53 @@ class ProjectsViewModel(QObject):
     def initialize_import_manager(self, board_repo, knot_repo):
         """Initialize the import manager with required repositories."""
         self._import_manager = ImportManager(self.repo, board_repo, knot_repo)
-
     def project_exists(self, name: str) -> bool:
         """Check if a project name already exists in the database."""
         return self.repo.project_exists(name)
 
-    def guess_species(self, project_name: str) -> Optional[str]:
+    def guess_species(self, file_path: str, project_name: str) -> Optional[str]:
         """
-        Attempt to extract species from the project name.
-        For now, returns None to simulate a failure and trigger the UI prompt.
+        Attempt to extract species from the file if it has the 'Species' column.
+        If not found, falls back to parsing the project name for legacy projects.
+        Returns None if both fail, triggering the UI prompt.
         """
+        # 1. Try to get it from the file directly (new export format)
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = f.read().splitlines()
+                if len(lines) >= 2:
+                    header = lines[0].split(";")
+                    if "Species" in header:
+                        idx = header.index("Species")
+                        first_data_row = lines[1].split(";")
+                        if idx < len(first_data_row):
+                            val = first_data_row[idx].strip()
+                            if val:
+                                return val
+        except Exception:
+            pass
+            
+        # 2. Fallback: Parse the project name (legacy format)
+        # Format expects: ..._'codice specie'_...
+        species_map = {
+            "ctsv": "Castanea sativa",
+            "pntd": "Pinus taeda",
+            "pnnn": "Pinus nigra",
+            "pnnl": "Pinus nigra laricio",
+            "fasy": "Fagus sylvatica",
+            "paul": "Paulonia",
+            "psmn": "Pseudotsuga menziesii",
+            "qcxe": "Quercia",
+            "lasi": "Larice siberiano",
+            "pnsy": "Pino silvestre"
+        }
+        
+        parts = project_name.split("_")
+        if len(parts) > 1:
+            code = parts[1].strip().lower()
+            if code in species_map:
+                return species_map[code]
+                
         return None
         
     @Slot(str, str, str)
