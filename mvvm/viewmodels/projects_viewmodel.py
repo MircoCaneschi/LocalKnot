@@ -5,11 +5,11 @@ Manages presentation state and handles user interactions.
 """
 
 from PySide6.QtCore import QObject, Signal, Slot, Property
-from typing import List
+from typing import List, Optional
 from core.repository import ProjectRepository
 from mvvm.models import Project
 from core.exceptions import LocalKnotError
-
+from core.import_manager import ImportManager
 
 class ProjectsViewModel(QObject):
     """
@@ -87,6 +87,10 @@ class ProjectsViewModel(QObject):
     # Emitted when an export succeeds
     export_success = Signal(str)
 
+    # Emitted when import succeeds or fails
+    import_success = Signal(str)
+    import_error = Signal(str)
+
     # ==================== CONSTRUCTOR ====================
 
     def __init__(self, repository: ProjectRepository):
@@ -97,6 +101,12 @@ class ProjectsViewModel(QObject):
         """
         super().__init__()
         self.repo = repository
+        
+        # Import Manager initialization (lazy load via property or initialized here, but it needs board_repo and knot_repo)
+        # We will receive it or pass it. Wait, ProjectsViewModel only has ProjectRepository.
+        # We can pass board_repo and knot_repo, or handle it differently.
+        # Actually, let's keep it simple and instantiate it when needed, or pass it from main.
+        self._import_manager = None
 
         # Internal state
         self._projects = []
@@ -601,6 +611,41 @@ class ProjectsViewModel(QObject):
             return
         
         self.export_requested.emit()
+
+    @Slot(object, object)
+    def initialize_import_manager(self, board_repo, knot_repo):
+        """Initialize the import manager with required repositories."""
+        self._import_manager = ImportManager(self.repo, board_repo, knot_repo)
+
+    def project_exists(self, name: str) -> bool:
+        """Check if a project name already exists in the database."""
+        return self.repo.project_exists(name)
+
+    def guess_species(self, project_name: str) -> Optional[str]:
+        """
+        Attempt to extract species from the project name.
+        For now, returns None to simulate a failure and trigger the UI prompt.
+        """
+        return None
+        
+    @Slot(str, str, str)
+    def execute_import(self, file_path: str, project_name: str, species: str):
+        """
+        Execute the import for a specific file.
+        """
+        if not self._import_manager:
+            self.import_error.emit("Import Manager not initialized.")
+            return
+            
+        try:
+            success = self._import_manager.parse_and_import(file_path, project_name, species)
+            if success:
+                # Reload projects and species
+                self._load_projects_from_db()
+                self._load_species_from_db()
+                self.import_success.emit(f"Successfully imported {project_name}.")
+        except Exception as e:
+            self.import_error.emit(f"Failed to import {project_name}: {str(e)}")
 
     # ==================== PRIVATE METHODS ====================
 

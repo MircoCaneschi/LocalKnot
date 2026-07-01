@@ -112,6 +112,9 @@ class MainWindow(QMainWindow):
         self.boards_vm = BoardsViewModel(self.board_repo, self.knot_repo)
         self.knots_vm = KnotsViewModel(self.knot_repo, self.board_repo)
 
+        # Initialize ImportManager in ProjectsViewModel
+        self.projects_vm.initialize_import_manager(self.board_repo, self.knot_repo)
+
         # Create Views
         self.projects_view = ProjectsView(self.projects_vm)
         self.boards_view = BoardsView(self.boards_vm)

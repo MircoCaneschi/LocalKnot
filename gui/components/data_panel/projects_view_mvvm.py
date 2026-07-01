@@ -16,9 +16,10 @@ Data Flow:
 from PySide6.QtWidgets import (
     QHBoxLayout, QPushButton, QLabel, QComboBox, QVBoxLayout,
     QSizePolicy, QSpacerItem, QFormLayout, QMessageBox, QStyle, QLineEdit,
-    QWidget
+    QWidget, QFileDialog, QInputDialog
 )
 from PySide6.QtCore import Qt, QObject, QEvent
+import os
 # pyrefly: ignore [missing-import]
 from pyside6helpers import icons
 
@@ -113,9 +114,10 @@ class ProjectsView:
         self.project_msg = None
         self.species_msg = None
         
-        # Export components
+        # Export and Import components
         self.export_btn = None
         self.export_msg = None
+        self.import_btn = None
 
         # Hidden panel components
         self.hidden_combo_box_projects = None
@@ -258,14 +260,20 @@ class ProjectsView:
         form.addRow("Species", species_layout)
         form.addRow("", self.species_msg)
         
-        # Export Layout
+        # Export / Import Layout
         export_layout = QHBoxLayout()
         self.export_btn = QPushButton("Export Data")
-        self.export_btn.setIcon(icons.download())
+        self.export_btn.setIcon(icons.upload())
         self.export_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.export_msg = QLabel()
         self.export_msg.hide()
+        
+        self.import_btn = QPushButton("Import Data")
+        self.import_btn.setIcon(icons.download())
+        self.import_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
         export_layout.addWidget(self.export_btn)
+        export_layout.addWidget(self.import_btn)
         export_layout.addWidget(self.export_msg)
         export_layout.addStretch()
 
@@ -329,13 +337,14 @@ class ProjectsView:
                     self.add_species_btn, self.modify_species_btn, self.delete_species_btn,
                     self.right_shift_btn, self.left_shift_btn,
                     self.hidden_right_shift_btn, self.hidden_left_shift_btn,
-                    self.export_btn]:
+                    self.export_btn, self.import_btn]:
             btn.clicked.connect(self._hide_messages)
 
         # Button clicks → ViewModel Slots
         self.new_btn.clicked.connect(self.view_model.handle_new_project)
         self.save_btn.clicked.connect(self.view_model.handle_save_project)
         self.export_btn.clicked.connect(self.view_model.handle_export_project)
+        self.import_btn.clicked.connect(self._on_import_clicked)
         
         # Species management clicks
         self.add_species_btn.clicked.connect(self.view_model.handle_add_species)
@@ -384,6 +393,8 @@ class ProjectsView:
         self.view_model.project_saved.connect(self._on_project_saved)
         self.view_model.export_error.connect(self._on_export_error)
         self.view_model.export_success.connect(self._on_export_success)
+        self.view_model.import_error.connect(self._on_export_error) # reuse the same message label
+        self.view_model.import_success.connect(self._on_export_success)
         
         # Sync Species List (Main and Hidden)
         self.view_model.species_changed.connect(self._on_species_changed)
@@ -522,11 +533,62 @@ class ProjectsView:
 
     def _on_export_success(self, message: str):
         """
-        Slot called when ViewModel emits export_success signal.
-        Displays success message to user next to export button.
+        Slot called when ViewModel emits export_success or import_success signal.
+        Displays success message to user next to export/import buttons.
         """
         self.export_msg.setText(message)
         self.export_msg.show()
+
+    def _on_import_clicked(self):
+        """
+        Handle import button click: open file dialog, process files, and handle user inputs
+        for naming collisions and missing species.
+        """
+        # Open file dialog
+        file_paths, _ = QFileDialog.getOpenFileNames(
+            self.import_btn.window(),
+            "Import Project Data",
+            "",
+            "Text/CSV Files (*.txt *.csv);;All Files (*)"
+        )
+
+        if not file_paths:
+            return  # User cancelled
+
+        for file_path in file_paths:
+            # Extract base name without extension
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+            project_name = base_name
+
+            # Handle duplicate project names
+            while self.view_model.project_exists(project_name):
+                new_name, ok = QInputDialog.getText(
+                    self.import_btn.window(),
+                    "Duplicate Project Name",
+                    f"A project named '{project_name}' already exists.\\nPlease enter a new name:",
+                    QLineEdit.Normal,
+                    project_name + " (1)"
+                )
+                if not ok or not new_name.strip():
+                    return # User cancelled the import for this and subsequent files (or we could just continue to the next)
+                project_name = new_name.strip()
+
+            # Handle missing species
+            species = self.view_model.guess_species(project_name)
+            if not species:
+                species_input, ok = QInputDialog.getText(
+                    self.import_btn.window(),
+                    "Unknown Species",
+                    f"Cannot determine species for project '{project_name}'.\\nPlease enter the species name:",
+                    QLineEdit.Normal,
+                    "Placeholder"
+                )
+                if not ok or not species_input.strip():
+                    return # User cancelled
+                species = species_input.strip()
+
+            # Execute import via ViewModel
+            self.view_model.execute_import(file_path, project_name, species)
 
     def _on_species_error(self, error_message: str):
         """
