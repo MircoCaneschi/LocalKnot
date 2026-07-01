@@ -650,6 +650,9 @@ class KnotsViewModel(QObject):
             z2 = getattr(self, f'_side{side}_z2')
             dmin = getattr(self, f'_side{side}_dmin')
             
+            lbl_z1 = "y1" if side in (2, 4) else "z1"
+            lbl_z2 = "y2" if side in (2, 4) else "z2"
+            
             if z1 is not None or z2 is not None or dmin is not None:
                 # If any field is compiled, all must be compiled for that side
                 if z1 is None or z2 is None or dmin is None:
@@ -661,12 +664,12 @@ class KnotsViewModel(QObject):
                 
                 if z1 < 0:
                     if f'side{side}_z1' not in invalid_fields: invalid_fields.append(f'side{side}_z1')
-                    error_msgs.append(f"Side {side_name}: z1 must be >= 0")
+                    error_msgs.append(f"Side {side_name}: {lbl_z1} must be >= 0")
 
                 if z1 >= z2:
                     if f'side{side}_z1' not in invalid_fields: invalid_fields.append(f'side{side}_z1')
                     if f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
-                    error_msgs.append(f"Side {side_name}: z1 must be < z2 (got z1={z1}, z2={z2})")
+                    error_msgs.append(f"Side {side_name}: {lbl_z1} must be < {lbl_z2} (got {lbl_z1}={z1}, {lbl_z2}={z2})")
                     continue  # dmin and bounds checks depend on a valid interval, skip them
                 
                 if dmin <= 0:
@@ -675,43 +678,43 @@ class KnotsViewModel(QObject):
                         
                 if dmin > (z2 - z1):
                     if f'side{side}_dmin' not in invalid_fields: invalid_fields.append(f'side{side}_dmin')
-                    error_msgs.append(f"Side {side_name}: dmin must be <= (z2 - z1)")
+                    error_msgs.append(f"Side {side_name}: dmin must be <= ({lbl_z2} - {lbl_z1})")
                     
                 if side in (1, 3) and z2 > board_height:
                     if f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
-                    error_msgs.append(f"Side {side_name}: z2 ({z2}) exceeds board height ({board_height})")
+                    error_msgs.append(f"Side {side_name}: {lbl_z2} ({z2}) exceeds board height ({board_height})")
                 elif side in (2, 4) and z2 > board_base:
                     if f'side{side}_z2' not in invalid_fields: invalid_fields.append(f'side{side}_z2')
-                    error_msgs.append(f"Side {side_name}: z2 ({z2}) exceeds board base ({board_base})")
+                    error_msgs.append(f"Side {side_name}: {lbl_z2} ({z2}) exceeds board base ({board_base})")
                     
         # Corner validation rules
         if self._side1_z2 == board_height and self._side4_z1 is not None and self._side4_z1 != 0:
             if 'side4_z1' not in invalid_fields: invalid_fields.append('side4_z1')
-            error_msgs.append("Corner Rule (Top-Left): If Side 1 reaches the corner (z2=height), Side 4 must start at 0.")
+            error_msgs.append("Corner Rule (Top-Left): If Side 1 reaches the corner (z2=height), Side 4 must start at 0 (y1=0).")
         if self._side4_z1 == 0 and self._side1_z2 is not None and self._side1_z2 != board_height:
             if 'side1_z2' not in invalid_fields: invalid_fields.append('side1_z2')
-            error_msgs.append("Corner Rule (Top-Left): If Side 4 starts at 0, Side 1 must reach the corner (z2=height).")
+            error_msgs.append("Corner Rule (Top-Left): If Side 4 starts at 0 (y1=0), Side 1 must reach the corner (z2=height).")
             
         if self._side4_z2 == board_base and self._side3_z1 is not None and self._side3_z1 != 0:
             if 'side3_z1' not in invalid_fields: invalid_fields.append('side3_z1')
-            error_msgs.append("Corner Rule (Bottom-Left): If Side 4 reaches the corner (z2=base), Side 3 must start at 0.")
+            error_msgs.append("Corner Rule (Bottom-Left): If Side 4 reaches the corner (y2=base), Side 3 must start at 0 (z1=0).")
         if self._side3_z1 == 0 and self._side4_z2 is not None and self._side4_z2 != board_base:
             if 'side4_z2' not in invalid_fields: invalid_fields.append('side4_z2')
-            error_msgs.append("Corner Rule (Bottom-Left): If Side 3 starts at 0, Side 4 must reach the corner (z2=base).")
+            error_msgs.append("Corner Rule (Bottom-Left): If Side 3 starts at 0 (z1=0), Side 4 must reach the corner (y2=base).")
             
         if self._side3_z2 == board_height and self._side2_z1 is not None and self._side2_z1 != 0:
             if 'side2_z1' not in invalid_fields: invalid_fields.append('side2_z1')
-            error_msgs.append("Corner Rule (Bottom-Right): If Side 3 reaches the corner (z2=height), Side 2 must start at 0.")
+            error_msgs.append("Corner Rule (Bottom-Right): If Side 3 reaches the corner (z2=height), Side 2 must start at 0 (y1=0).")
         if self._side2_z1 == 0 and self._side3_z2 is not None and self._side3_z2 != board_height:
             if 'side3_z2' not in invalid_fields: invalid_fields.append('side3_z2')
-            error_msgs.append("Corner Rule (Bottom-Right): If Side 2 starts at 0, Side 3 must reach the corner (z2=height).")
+            error_msgs.append("Corner Rule (Bottom-Right): If Side 2 starts at 0 (y1=0), Side 3 must reach the corner (z2=height).")
             
         if self._side2_z2 == board_base and self._side1_z1 is not None and self._side1_z1 != 0:
             if 'side1_z1' not in invalid_fields: invalid_fields.append('side1_z1')
-            error_msgs.append("Corner Rule (Top-Right): If Side 2 reaches the corner (z2=base), Side 1 must start at 0.")
+            error_msgs.append("Corner Rule (Top-Right): If Side 2 reaches the corner (y2=base), Side 1 must start at 0 (z1=0).")
         if self._side1_z1 == 0 and self._side2_z2 is not None and self._side2_z2 != board_base:
             if 'side2_z2' not in invalid_fields: invalid_fields.append('side2_z2')
-            error_msgs.append("Corner Rule (Top-Right): If Side 1 starts at 0, Side 2 must reach the corner (z2=base).")
+            error_msgs.append("Corner Rule (Top-Right): If Side 1 starts at 0 (z1=0), Side 2 must reach the corner (y2=base).")
                     
         if invalid_fields:
             self.validation_failed.emit(invalid_fields)

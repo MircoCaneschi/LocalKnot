@@ -54,6 +54,8 @@ class VirtualBoardView(QWidget):
             side_label = QLabel(f"<b>Side {side_num}:</b>")
             side_label.setObjectName("VirtualBoardSideLabel")
             
+            axis_lbl = "y" if ("side2" in side_name or "side4" in side_name) else "z"
+            
             if orientation == "horizontal":
                 outer = QHBoxLayout(container)
                 outer.setContentsMargins(5, 3, 5, 3)
@@ -63,12 +65,13 @@ class VirtualBoardView(QWidget):
                 layout = QHBoxLayout()
                 layout.setContentsMargins(0, 0, 0, 0)
                 for field in ["z1", "z2", "dmin"]:
+                    disp_field = field.replace("z", axis_lbl)
                     form = QFormLayout()
                     form.setContentsMargins(0, 0, 0, 0)
                     line_edit = QLineEdit()
                     line_edit.setValidator(validator)
                     line_edit.setMaximumWidth(60)
-                    form.addRow(f"{field}:", line_edit)
+                    form.addRow(f"{disp_field}:", line_edit)
                     layout.addLayout(form)
                     group_inputs[field] = line_edit
                 outer.addLayout(layout)
@@ -82,10 +85,11 @@ class VirtualBoardView(QWidget):
                 layout.setContentsMargins(0, 0, 0, 0)
                 layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
                 for field in ["z1", "z2", "dmin"]:
+                    disp_field = field.replace("z", axis_lbl)
                     line_edit = QLineEdit()
                     line_edit.setValidator(validator)
                     line_edit.setMaximumWidth(60)
-                    layout.addRow(f"{field}:", line_edit)
+                    layout.addRow(f"{disp_field}:", line_edit)
                     group_inputs[field] = line_edit
                 outer.addLayout(layout)
                     
