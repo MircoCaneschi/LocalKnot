@@ -399,14 +399,17 @@ class BoardsView:
         if not board_no:
             return
 
-        reply = QMessageBox.question(
-            self.delete_btn.window(), 'Delete Board',
-            f"Are you sure you want to delete board '{board_no}'?\n"
-            "This will also delete all associated knots.",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
+        from gui.theme_utils import set_custom_titlebar_color
+        msg = QMessageBox(self.delete_btn.window())
+        msg.setWindowTitle('Delete Board')
+        msg.setText(f"Are you sure you want to delete board '{board_no}'?\nThis will also delete all associated knots.")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setIcon(QMessageBox.Icon.Question)
+        set_custom_titlebar_color(msg)
+        reply = msg.exec()
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.view_model.handle_delete_board()
 
     def _on_current_board_changed(self, text: str):

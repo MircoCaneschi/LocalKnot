@@ -540,13 +540,17 @@ class KnotsView:
         if not knot_no:
             return
 
-        reply = QMessageBox.question(
-            self.delete_btn.window(), 'Delete Knot',
-            f"Are you sure you want to delete knot '{knot_no}'?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
+        from gui.theme_utils import set_custom_titlebar_color
+        msg = QMessageBox(self.delete_btn.window())
+        msg.setWindowTitle('Delete Knot')
+        msg.setText(f"Are you sure you want to delete knot '{knot_no}'?")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setIcon(QMessageBox.Icon.Question)
+        set_custom_titlebar_color(msg)
+        reply = msg.exec()
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.view_model.handle_delete_knot()
 
     def _on_current_knot_changed(self, text: str):

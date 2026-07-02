@@ -562,13 +562,14 @@ class ProjectsView:
 
             # Handle duplicate project names
             while self.view_model.project_exists(project_name):
-                new_name, ok = QInputDialog.getText(
-                    self.import_btn.window(),
-                    "Duplicate Project Name",
-                    f"A project named '{project_name}' already exists.\\nPlease enter a new name:",
-                    QLineEdit.Normal,
-                    project_name + " (1)"
-                )
+                from gui.theme_utils import set_custom_titlebar_color
+                dialog = QInputDialog(self.import_btn.window())
+                dialog.setWindowTitle("Duplicate Project Name")
+                dialog.setLabelText(f"A project named '{project_name}' already exists.\nPlease enter a new name:")
+                dialog.setTextValue(project_name + " (1)")
+                set_custom_titlebar_color(dialog)
+                ok = dialog.exec() == QInputDialog.DialogCode.Accepted
+                new_name = dialog.textValue()
                 if not ok or not new_name.strip():
                     return # User cancelled the import for this and subsequent files (or we could just continue to the next)
                 project_name = new_name.strip()
@@ -576,13 +577,14 @@ class ProjectsView:
             # Handle missing species
             species = self.view_model.guess_species(file_path, project_name)
             if not species:
-                species_input, ok = QInputDialog.getText(
-                    self.import_btn.window(),
-                    "Unknown Species",
-                    f"Cannot determine species for project '{project_name}'.\\nPlease enter the species name:",
-                    QLineEdit.Normal,
-                    "Placeholder"
-                )
+                from gui.theme_utils import set_custom_titlebar_color
+                dialog = QInputDialog(self.import_btn.window())
+                dialog.setWindowTitle("Unknown Species")
+                dialog.setLabelText(f"Cannot determine species for project '{project_name}'.\nPlease enter the species name:")
+                dialog.setTextValue("Placeholder")
+                set_custom_titlebar_color(dialog)
+                ok = dialog.exec() == QInputDialog.DialogCode.Accepted
+                species_input = dialog.textValue()
                 if not ok or not species_input.strip():
                     return # User cancelled
                 species = species_input.strip()
@@ -731,14 +733,17 @@ class ProjectsView:
         if not project_name:
             return
 
-        reply = QMessageBox.question(
-            self.delete_btn.window(), 'Delete Project',
-            f"Are you sure you want to delete project '{project_name}'?\n"
-            "This will also delete all associated boards and knots.",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
+        from gui.theme_utils import set_custom_titlebar_color
+        msg = QMessageBox(self.delete_btn.window())
+        msg.setWindowTitle('Delete Project')
+        msg.setText(f"Are you sure you want to delete project '{project_name}'?\nThis will also delete all associated boards and knots.")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setIcon(QMessageBox.Icon.Question)
+        set_custom_titlebar_color(msg)
+        reply = msg.exec()
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.view_model.handle_delete_project()
 
     def _on_delete_species_clicked(self):
@@ -747,14 +752,17 @@ class ProjectsView:
         if not species_name:
             return
 
-        reply = QMessageBox.question(
-            self.delete_species_btn.window(), 'Delete Species',
-            f"Are you sure you want to delete species '{species_name}'?\n"
-            "This will only succeed if the species is not used by any project.",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
+        from gui.theme_utils import set_custom_titlebar_color
+        msg = QMessageBox(self.delete_species_btn.window())
+        msg.setWindowTitle('Delete Species')
+        msg.setText(f"Are you sure you want to delete species '{species_name}'?\nThis will only succeed if the species is not used by any project.")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        msg.setIcon(QMessageBox.Icon.Question)
+        set_custom_titlebar_color(msg)
+        reply = msg.exec()
 
-        if reply == QMessageBox.Yes:
+        if reply == QMessageBox.StandardButton.Yes:
             self.view_model.handle_delete_species()
 
     def _on_current_species_changed(self, text: str):

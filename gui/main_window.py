@@ -64,27 +64,8 @@ class MainWindow(QMainWindow):
         self._set_custom_titlebar_color()
 
     def _set_custom_titlebar_color(self):
-        # Set the native Windows 11 title bar color
-        if sys.platform == "win32":
-            try:
-                hwnd = int(self.winId())
-                DWMWA_CAPTION_COLOR = 35
-                DWMWA_TEXT_COLOR = 36
-                
-                # Color #0c1230 in COLORREF format (0x00bbggrr)
-                # R=12 (0c), G=18 (12), B=48 (30) -> 0x0030120c
-                bg_color = 0x0030120c
-                text_color = 0x00FFFFFF # White
-                
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd, DWMWA_CAPTION_COLOR,
-                    ctypes.byref(ctypes.c_int(bg_color)), 4)
-                
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                    hwnd, DWMWA_TEXT_COLOR,
-                    ctypes.byref(ctypes.c_int(text_color)), 4)
-            except Exception as e:
-                print("Failed to set title bar color:", e)
+        from gui.theme_utils import set_custom_titlebar_color
+        set_custom_titlebar_color(self)
         
         self.scroll_area = FloatingScrollArea()
         self.scroll_area.setWidgetResizable(True)
