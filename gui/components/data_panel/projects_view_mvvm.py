@@ -393,7 +393,7 @@ class ProjectsView:
         self.view_model.project_saved.connect(self._on_project_saved)
         self.view_model.export_error.connect(self._on_export_error)
         self.view_model.export_success.connect(self._on_export_success)
-        self.view_model.import_error.connect(self._on_export_error) # reuse the same message label
+        self.view_model.import_error.connect(self._on_import_error)
         self.view_model.import_success.connect(self._on_export_success)
         
         # Sync Species List (Main and Hidden)
@@ -539,6 +539,19 @@ class ProjectsView:
         self.export_msg.setText(message)
         self.export_msg.show()
 
+    def _on_import_error(self, error_message: str):
+        """
+        Slot called when ViewModel emits import_error signal.
+        Displays error message in a styled popup.
+        """
+        from gui.theme_utils import set_custom_titlebar_color
+        msg = QMessageBox(self.import_btn.window())
+        msg.setWindowTitle("Errore di importazione")
+        msg.setText(error_message)
+        msg.setIcon(QMessageBox.Icon.Critical)
+        set_custom_titlebar_color(msg)
+        msg.exec()
+
     def _on_import_clicked(self):
         """
         Handle import button click: open file dialog, process files, and handle user inputs
@@ -556,6 +569,10 @@ class ProjectsView:
             return  # User cancelled
 
         for file_path in file_paths:
+            if not self.view_model.is_valid_export_file(file_path):
+                self._on_import_error("Il file non è valido.")
+                continue
+
             # Extract base name without extension
             base_name = os.path.splitext(os.path.basename(file_path))[0]
             project_name = base_name

@@ -620,6 +620,20 @@ class ProjectsViewModel(QObject):
         """Check if a project name already exists in the database."""
         return self.repo.project_exists(name)
 
+    def is_valid_export_file(self, file_path: str) -> bool:
+        """Check if the file is a valid KnotVision export."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                first_line = f.readline()
+                if not first_line:
+                    return False
+                headers = [h.strip() for h in first_line.split(";")]
+                if "No_Board" not in headers:
+                    return False
+            return True
+        except Exception:
+            return False
+
     def guess_species(self, file_path: str, project_name: str) -> Optional[str]:
         """
         Attempt to extract species from the file if it has the 'Species' column.
@@ -682,7 +696,7 @@ class ProjectsViewModel(QObject):
                 self._load_species_from_db()
                 self.import_success.emit(f"Successfully imported {project_name}.")
         except Exception as e:
-            self.import_error.emit(f"Failed to import {project_name}: {str(e)}")
+            self.import_error.emit(str(e))
 
     # ==================== PRIVATE METHODS ====================
 
