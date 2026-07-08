@@ -29,8 +29,21 @@ class ImportManager:
         if not lines:
             raise ValueError("The file is empty.")
 
+        # Check for new project/species headers
+        start_idx = 0
+        if len(lines) > 2 and lines[0].startswith("ProjectName;") and lines[1].startswith("Species;"):
+            file_proj_name = lines[0].split(";", 1)[1].strip()
+            file_species = lines[1].split(";", 1)[1].strip()
+            
+            if file_proj_name:
+                project_name = file_proj_name
+            if file_species:
+                species = file_species
+            
+            start_idx = 2
+
         # 2. Parse headers
-        header_line = lines[0]
+        header_line = lines[start_idx]
         headers = [h.strip() for h in header_line.split(";")]
         header_map = {h: i for i, h in enumerate(headers) if h}
 
@@ -45,7 +58,7 @@ class ImportManager:
         # We need these to validate knot coordinates against board dimensions
         board_dimensions: Dict[str, dict] = {} 
 
-        for line_idx in range(1, len(lines)):
+        for line_idx in range(start_idx + 1, len(lines)):
             line = lines[line_idx].strip()
             if not line:
                 continue
@@ -91,6 +104,8 @@ class ImportManager:
                         raise ValueError(f"{row_context}: 'Length' must be numeric.")
                     
                     b_testpos = get_int("Testpos", required=False)
+                    if b_testpos is not None and b_testpos >= b_length:
+                        raise ValueError(f"{row_context}: Testpos ({b_testpos}) must be less than board length ({b_length}).")
                     b_comment = get_val("B_Comment")
                     
                     board = Board(

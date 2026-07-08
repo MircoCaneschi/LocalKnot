@@ -267,6 +267,11 @@ class BoardsViewModel(QObject):
                 self.board_error.emit("Invalid measurements! Height, base, and length must be numbers >= 0.")
                 return
 
+            if self._test_position is not None and self._length is not None and self._test_position >= self._length:
+                self.board_error.emit(f"Test position ({self._test_position}) must be less than board length ({self._length}).")
+                self.validation_failed.emit(["TestPos"])
+                return
+
             # When modifying an existing board, verify no knot violates the new dimensions
             if not self._board_editable and self.knot_repo:
                 knots = self.knot_repo.get_all_knots(board_text, self._current_project)

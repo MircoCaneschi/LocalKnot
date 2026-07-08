@@ -624,10 +624,16 @@ class ProjectsViewModel(QObject):
         """Check if the file is a valid KnotVision export."""
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                first_line = f.readline()
-                if not first_line:
+                lines = f.read().splitlines()
+                if not lines:
                     return False
-                headers = [h.strip() for h in first_line.split(";")]
+                
+                # Check first line for old format, or third line for new format
+                header_line = lines[0]
+                if len(lines) > 2 and lines[0].startswith("ProjectName;") and lines[1].startswith("Species;"):
+                    header_line = lines[2]
+                    
+                headers = [h.strip() for h in header_line.split(";")]
                 if "No_Board" not in headers:
                     return False
             return True
@@ -645,6 +651,10 @@ class ProjectsViewModel(QObject):
             with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.read().splitlines()
                 if len(lines) >= 2:
+                    if lines[1].startswith("Species;"):
+                        return lines[1].split(";", 1)[1].strip()
+                    
+                    # Fallback for old check if it ever existed
                     header = lines[0].split(";")
                     if "Species" in header:
                         idx = header.index("Species")

@@ -10,7 +10,8 @@ class ExportManager:
     Handles the logic for exporting project data to a text file.
     """
 
-    def __init__(self, board_repo, knot_repo):
+    def __init__(self, project_repo, board_repo, knot_repo):
+        self.project_repo = project_repo
         self.board_repo = board_repo
         self.knot_repo = knot_repo
         self.calculator = BoardCalculator()
@@ -28,6 +29,9 @@ class ExportManager:
         Exports all boards and knots of a project to the specified text file.
         Returns True if successful.
         """
+        project = self.project_repo.get_project_by_id(project_id)
+        species = project.species if project and project.species else ""
+        
         boards = self.board_repo.get_all_boards(project_id)
         
         header = (
@@ -37,7 +41,11 @@ class ExportManager:
             "Pruned;Pruned_Y1;Pruned_Z1;Pruned_Y2;Pruned_Z2;"
         )
 
-        lines = [header]
+        lines = [
+            f"ProjectName;{project_id}",
+            f"Species;{species}",
+            header
+        ]
 
         for board in boards:
             knots = self.knot_repo.get_all_knots(board.board_no, project_id)

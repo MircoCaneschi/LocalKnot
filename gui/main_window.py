@@ -267,7 +267,7 @@ class MainWindow(QMainWindow):
 
         # Perform the export
         try:
-            exporter = ExportManager(self.board_repo, self.knot_repo)
+            exporter = ExportManager(self.project_repo, self.board_repo, self.knot_repo)
             success = exporter.export_project(project_id, file_path)
             if success:
                 self.projects_vm.export_success.emit("Project exported successfully!")

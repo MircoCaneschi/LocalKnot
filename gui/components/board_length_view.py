@@ -81,6 +81,30 @@ class BoardLengthView(QWidget):
         painter.setBrush(QBrush(QColor(240, 230, 210)))
         painter.drawRect(board_rect)
         
+        # Draw testpos and the 4 section lines
+        testpos = getattr(board, 'test_position', 0)
+        if testpos is not None and testpos > 0:
+            px_per_mm = rect_width / board_length
+            
+            def draw_v_line(x_mm, line_pen):
+                if 0 <= x_mm <= board_length:
+                    px_x = start_x + (x_mm * px_per_mm)
+                    painter.setPen(line_pen)
+                    painter.drawLine(QPointF(px_x, start_y), QPointF(px_x, start_y + rect_height))
+
+            # Pen for the 4 space-delimiting lines (less evident)
+            bound_pen = QPen(QColor(100, 100, 100, 150), 1, Qt.PenStyle.DashLine)
+            
+            # Draw the 4 lines that delimit the 3 spaces of 6*height
+            draw_v_line(testpos - 9 * board_hight, bound_pen)
+            draw_v_line(testpos - 3 * board_hight, bound_pen)
+            draw_v_line(testpos + 3 * board_hight, bound_pen)
+            draw_v_line(testpos + 9 * board_hight, bound_pen)
+            
+            # Pen for testpos (slightly more evident)
+            testpos_pen = QPen(QColor(50, 50, 200, 200), 1.5, Qt.PenStyle.SolidLine)
+            draw_v_line(testpos, testpos_pen)
+        
         # Draw board_id on the left side
         painter.setPen(Qt.GlobalColor.black)
         font = painter.font()
