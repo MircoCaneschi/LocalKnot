@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 3508 2481" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g transform="matrix(1.063035,0,0,1.081197,-158.201318,-147.335055)">
+        <ellipse cx="1070.053" cy="1283.293" rx="440.346" ry="420.575" style="fill:rgb(224,102,101);stroke:rgb(224,102,101);stroke-width:42.36px;"/>
+    </g>
+    <g transform="matrix(0.929541,0,0,0.947752,1376.705086,23.91347)">
+        <ellipse cx="1070.053" cy="1283.293" rx="440.346" ry="420.575" style="fill:rgb(235,235,235);stroke:rgb(13,121,242);stroke-width:168.23px;"/>
+    </g>
+    <g transform="matrix(0.815426,-0,0,0.815426,344.915393,527.422063)">
+        <g transform="matrix(948.460778,0,0,948.460778,1102.393986,1240.15748)">
+        </g>
+        <text x="453.569px" y="1240.157px" style="font-family:'YuGothic-Bold', 'Yu Gothic', sans-serif;font-weight:700;font-size:948.461px;fill:rgb(190,4,17);">X</text>
+    </g>
+    <g transform="matrix(0.647775,0,0,0.619647,1905.355606,702.706989)">
+        <g transform="matrix(948.460778,0,0,948.460778,994.024932,1240.15748)">
+        </g>
+        <text x="453.569px" y="1240.157px" style="font-family:'YuGothic-Bold', 'Yu Gothic', sans-serif;font-weight:700;font-size:948.461px;fill:rgb(34,1,178);">?</text>
+    </g>
+    <g transform="matrix(-0.761347,-0.648345,0.648345,-0.761347,2885.320844,4096.682027)">
+        <path d="M2196.647,1422.402L2268.208,1612.205L2125.085,1612.205L2196.647,1422.402Z" style="fill:rgb(235,235,235);"/>
+    </g>
+</svg>

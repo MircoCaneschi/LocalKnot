@@ -191,6 +191,19 @@ class MainWindow(QMainWindow):
         self.virtual_board_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.main_layout.addWidget(self.virtual_board_view, stretch=1)
 
+        # ==================== AI Analysis Section ====================
+        from core.ai.adapters.sam2_analyzer import Sam2Analyzer
+        from mvvm.viewmodels.ai_analysis_vm import AiAnalysisViewModel
+        from gui.components.ai_analysis_view import AiAnalysisView
+
+        self.ai_analyzer = Sam2Analyzer()
+        self.ai_analysis_vm = AiAnalysisViewModel(self.ai_analyzer, self.boards_vm, self.knots_vm)
+        self.ai_analysis_view = AiAnalysisView(self.ai_analysis_vm)
+        
+        # Add to the layout with a smaller stretch factor to give more room to VirtualBoard initially if needed
+        # Or no stretch so it takes its natural height (min 400px)
+        self.main_layout.addWidget(self.ai_analysis_view, stretch=0)
+        
         # Redraw the virtual board when board/knot/project data changes or is saved/deleted
         self.boards_vm.board_saved.connect(self.virtual_board_view._redraw_board)
         self.boards_vm.board_data_changed.connect(self.virtual_board_view._redraw_board)
