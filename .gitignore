@@ -44,3 +44,9 @@ riferimento java/
 dist/
 build/
 *.spec
+
+#models
+models/*.pt
+
+#cache
+__pycache__/

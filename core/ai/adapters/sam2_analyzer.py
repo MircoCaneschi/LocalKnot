@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import os
 import uuid
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 class Sam2Analyzer(BaseAIAnalyzer):
     def __init__(self, model_cfg="configs/sam2.1/sam2.1_hiera_s.yaml", model_ckpt="models/sam2.1_hiera_small.pt"):
@@ -28,6 +28,7 @@ class Sam2Analyzer(BaseAIAnalyzer):
         self.min_knot_area_px = 30
         self.max_knot_area_ratio = 0.10  # A knot shouldn't exceed 10% of total board area
         self.max_brightness_ratio = 0.85  # Knot must be at least 15% darker than surrounding wood
+        self.max_overlap_ratio = 0.05     # Discard masks overlapping > 5% with higher-scoring masks
         
     def load_model(self) -> None:
         # Skip if already loaded
@@ -161,23 +162,35 @@ class Sam2Analyzer(BaseAIAnalyzer):
             ))
         return faces
 
-    def _is_dark_knot(self, mask_bool: np.ndarray, gray_img: np.ndarray) -> bool:
+    def _is_dark_knot(self, mask_bool: np.ndarray, gray_img: np.ndarray, bbox: list = None) -> bool:
         """
         Phase 3: Verify if a segment is a genuine dark knot by comparing its brightness
         against the immediate surrounding wood background.
+        Optimized with local bounding box sub-cropping for fast computation.
         """
-        mask_pixels = gray_img[mask_bool]
+        if bbox is not None:
+            x, y, w, h = bbox
+            pad = 15
+            y0, y1 = max(0, int(y) - pad), min(gray_img.shape[0], int(y + h) + pad)
+            x0, x1 = max(0, int(x) - pad), min(gray_img.shape[1], int(x + w) + pad)
+            crop_gray = gray_img[y0:y1, x0:x1]
+            crop_mask = mask_bool[y0:y1, x0:x1]
+        else:
+            crop_gray = gray_img
+            crop_mask = mask_bool
+
+        mask_pixels = crop_gray[crop_mask]
         if len(mask_pixels) == 0:
             return False
             
         mean_knot = float(np.mean(mask_pixels))
         
-        mask_uint8 = (mask_bool * 255).astype(np.uint8)
+        mask_uint8 = (crop_mask * 255).astype(np.uint8)
         kernel = np.ones((13, 13), np.uint8)
         dilated_mask = cv2.dilate(mask_uint8, kernel, iterations=2)
-        bg_bool = (dilated_mask > 0) & (~mask_bool)
+        bg_bool = (dilated_mask > 0) & (~crop_mask)
         
-        bg_pixels = gray_img[bg_bool]
+        bg_pixels = crop_gray[bg_bool]
         if len(bg_pixels) == 0:
             return True
             
@@ -189,12 +202,64 @@ class Sam2Analyzer(BaseAIAnalyzer):
         # Knot must be significantly darker than local background (ratio <= 0.88)
         return ratio <= self.max_brightness_ratio
 
-    def analyze(self, image_path: str, board_length: int, board_base: int, board_height: int) -> AIAnalysisResult:
+    def _filter_overlapping_masks(self, masks: List[dict], max_overlap_ratio: float = 0.05) -> List[dict]:
+        """
+        Phase 3B: Non-Maximum Suppression (NMS).
+        Optimized with bounding box fast-path check before full pixel matrix operations.
+        """
+        # Sort masks by predicted IoU / confidence score (descending)
+        sorted_masks = sorted(masks, key=lambda m: m.get('predicted_iou', 0.0), reverse=True)
+        
+        filtered = []
+        for curr in sorted_masks:
+            curr_bool = curr['segmentation']
+            curr_area = curr['area']
+            if curr_area <= 0:
+                continue
+                
+            curr_bbox = curr.get('bbox')
+            is_overlap = False
+            for accepted in filtered:
+                acc_area = accepted['area']
+                acc_bbox = accepted.get('bbox')
+                
+                # Bounding box fast-path check
+                if curr_bbox and acc_bbox:
+                    x1, y1, w1, h1 = curr_bbox
+                    x2, y2, w2, h2 = acc_bbox
+                    if (x1 + w1 <= x2) or (x2 + w2 <= x1) or (y1 + h1 <= y2) or (y2 + h2 <= y1):
+                        continue
+
+                acc_bool = accepted['segmentation']
+                # Compute intersection
+                intersection = np.logical_and(curr_bool, acc_bool)
+                inter_area = np.sum(intersection)
+                
+                if inter_area <= 0:
+                    continue
+                    
+                # Overlap ratio relative to the smaller mask area
+                overlap_ratio = inter_area / float(min(curr_area, acc_area))
+                
+                if overlap_ratio > max_overlap_ratio:
+                    is_overlap = True
+                    break
+                    
+            if not is_overlap:
+                filtered.append(curr)
+                
+        return filtered
+
+    def analyze(self, image_path: str, board_length: int, board_base: int, board_height: int, test_position: int = 0, cancel_checker=None) -> Optional[AIAnalysisResult]:
+        if cancel_checker and cancel_checker():
+            print("Sam2Analyzer: Analysis cancelled before model loading.")
+            return None
+
         if self.mask_generator is None:
             print("Sam2Analyzer: Auto-loading model...")
             self.load_model()
             
-        print(f"Sam2Analyzer: Analyzing {image_path}...")
+        print(f"Sam2Analyzer: Analyzing {image_path} (Test Position: {test_position}mm)...")
         
         img_bgr = cv2.imread(image_path)
         if img_bgr is None:
@@ -210,13 +275,29 @@ class Sam2Analyzer(BaseAIAnalyzer):
         # --- Phase 1B: Detect Board Face Division Lines ---
         faces_crop = self._detect_face_divisions(wood_rgb, board_height=board_height, board_base=board_base)
         
-        # --- Resize wood image for fast SAM2 inference ---
+        # --- Phase 1C: Restrict Analysis to TestPos ROI if specified ---
+        testpos_crop_x0 = 0
+        if test_position and test_position > 0 and board_length > 0:
+            px_per_mm_x = wood_width / float(board_length)
+            min_x_mm = max(0, test_position - (3 * board_height))
+            max_x_mm = min(board_length, test_position + (3 * board_height))
+            
+            min_x_px = int(min_x_mm * px_per_mm_x)
+            max_x_px = int(max_x_mm * px_per_mm_x)
+            
+            if max_x_px > min_x_px:
+                wood_rgb = wood_rgb[:, min_x_px:max_x_px]
+                testpos_crop_x0 = min_x_px
+                print(f"Sam2Analyzer: Restricted analysis to TestPos ROI [{min_x_px}px : {max_x_px}px] (ROI width: {wood_rgb.shape[1]}px vs total: {wood_width}px)")
+        
+        # --- Resize wood ROI image for fast SAM2 inference ---
         scale_factor = 1.0
-        longest_edge = max(wood_height, wood_width)
+        roi_h, roi_w = wood_rgb.shape[:2]
+        longest_edge = max(roi_h, roi_w)
         if longest_edge > self.max_edge:
             scale_factor = self.max_edge / longest_edge
-            new_w = int(wood_width * scale_factor)
-            new_h = int(wood_height * scale_factor)
+            new_w = int(roi_w * scale_factor)
+            new_h = int(roi_h * scale_factor)
             proc_rgb = cv2.resize(wood_rgb, (new_w, new_h), interpolation=cv2.INTER_AREA)
         else:
             proc_rgb = wood_rgb.copy()
@@ -224,20 +305,47 @@ class Sam2Analyzer(BaseAIAnalyzer):
         proc_h, proc_w = proc_rgb.shape[:2]
         proc_gray = cv2.cvtColor(proc_rgb, cv2.COLOR_RGB2GRAY)
         
-        # --- Phase 2: Run SAM2 Mask Generator ---
-        if self._use_autocast:
-            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+        # --- SAM2 prompt grid density ---
+        target_pps = self.points_per_side
+        try:
+            from sam2.automatic_mask_generator import build_all_layer_point_grids
+            self.mask_generator.point_grids = build_all_layer_point_grids(
+                target_pps,
+                self.crop_n_layers,
+                1
+            )
+        except Exception:
+            pass
+
+        if cancel_checker and cancel_checker():
+            print("Sam2Analyzer: Analysis cancelled before SAM2 inference.")
+            return None
+
+        print(f"Sam2Analyzer: Running SAM2 inference (Points per side: {target_pps}, Total points: {target_pps * target_pps})...")
+
+        # --- Phase 2: Run SAM2 Mask Generator on ROI ---
+        with torch.inference_mode():
+            if self._use_autocast:
+                with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                    raw_masks = self.mask_generator.generate(proc_rgb)
+            else:
                 raw_masks = self.mask_generator.generate(proc_rgb)
-        else:
-            raw_masks = self.mask_generator.generate(proc_rgb)
             
-        print(f"Sam2Analyzer: Raw masks generated: {len(raw_masks)}")
+        if cancel_checker and cancel_checker():
+            print("Sam2Analyzer: Analysis cancelled after SAM2 inference.")
+            return None
+
+        print(f"Sam2Analyzer: Raw masks generated in ROI: {len(raw_masks)}")
         
-        # --- Phase 3: Post-processing & Darkness Filtering ---
-        segments = []
+        # --- Phase 3A: Post-processing & Darkness Filtering ---
+        candidate_masks = []
         max_area_px = proc_w * proc_h * self.max_knot_area_ratio
         
         for mask_data in raw_masks:
+            if cancel_checker and cancel_checker():
+                print("Sam2Analyzer: Analysis cancelled during mask filtering.")
+                return None
+
             mask_bool = mask_data['segmentation']
             area = mask_data['area']
             
@@ -246,9 +354,23 @@ class Sam2Analyzer(BaseAIAnalyzer):
                 continue
                 
             # Darkness filter
-            if not self._is_dark_knot(mask_bool, proc_gray):
+            if not self._is_dark_knot(mask_bool, proc_gray, bbox=mask_data.get('bbox')):
                 continue
                 
+            candidate_masks.append(mask_data)
+            
+        # --- Phase 3B: Overlap Suppression (NMS > 5% area overlap) ---
+        retained_masks = self._filter_overlapping_masks(candidate_masks, max_overlap_ratio=self.max_overlap_ratio)
+        print(f"Sam2Analyzer: NMS filter reduced {len(candidate_masks)} candidates to {len(retained_masks)} unique knot masks.")
+
+        segments = []
+        for mask_data in retained_masks:
+            if cancel_checker and cancel_checker():
+                print("Sam2Analyzer: Analysis cancelled during polygon conversion.")
+                return None
+
+            mask_bool = mask_data['segmentation']
+            
             # Contour extraction & preservation of fine irregular shapes
             mask_uint8 = (mask_bool * 255).astype(np.uint8)
             contours, _ = cv2.findContours(mask_uint8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -256,18 +378,17 @@ class Sam2Analyzer(BaseAIAnalyzer):
                 continue
                 
             largest_contour = max(contours, key=cv2.contourArea)
-            # Use smaller epsilon to preserve exact irregular knot contours
             epsilon = 0.002 * cv2.arcLength(largest_contour, True)
             approx = cv2.approxPolyDP(largest_contour, epsilon, True)
             
             if len(approx) < 3:
                 continue
                 
-            # Convert contour points to cropped wood coordinates
+            # Convert contour points to full wood image coordinates (adding testpos offset)
             inv_scale = 1.0 / scale_factor
             poly = []
             for pt in approx:
-                x_orig = float(pt[0][0]) * inv_scale
+                x_orig = (float(pt[0][0]) * inv_scale) + testpos_crop_x0
                 y_orig = float(pt[0][1]) * inv_scale
                 poly.append(Point2D(x=x_orig, y=y_orig))
                 
@@ -286,7 +407,7 @@ class Sam2Analyzer(BaseAIAnalyzer):
                 confidence=round(float(mask_data.get('predicted_iou', 1.0)), 3)
             ))
             
-        print(f"Sam2Analyzer: {len(segments)} valid knot segments retained.")
+        print(f"Sam2Analyzer: {len(segments)} final non-overlapping knot segments retained in ROI.")
         
         return AIAnalysisResult(
             image_width=wood_width,

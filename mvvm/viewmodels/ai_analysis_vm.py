@@ -8,13 +8,21 @@ class AnalysisWorker(QThread):
     analysis_complete = Signal(object)  # Emits AIAnalysisResult
     analysis_error = Signal(str)
 
-    def __init__(self, analyzer, image_path, board_length, board_base, board_height):
+    def __init__(self, analyzer, image_path, board_length, board_base, board_height, test_position: int = 0):
         super().__init__()
         self.analyzer = analyzer
         self.image_path = image_path
         self.board_length = board_length
         self.board_base = board_base
         self.board_height = board_height
+        self.test_position = test_position
+        self._is_cancelled = False
+
+    def stop(self):
+        self._is_cancelled = True
+
+    def check_cancelled(self) -> bool:
+        return self._is_cancelled
 
     def run(self):
         try:
@@ -23,11 +31,21 @@ class AnalysisWorker(QThread):
                 image_path=self.image_path,
                 board_length=self.board_length,
                 board_base=self.board_base,
-                board_height=self.board_height
+                board_height=self.board_height,
+                test_position=self.test_position,
+                cancel_checker=self.check_cancelled
             )
-            self.analysis_complete.emit(result)
+            if not self._is_cancelled and result is not None:
+                self.analysis_complete.emit(result)
         except Exception as e:
-            self.analysis_error.emit(str(e))
+            if not self._is_cancelled:
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                except Exception:
+                    pass
+                self.analysis_error.emit(str(e))
 
 
 class AiAnalysisViewModel(QObject):
@@ -37,6 +55,7 @@ class AiAnalysisViewModel(QObject):
     error_occurred = Signal(str)
     selection_changed = Signal(list) # Passes list of selected segment_ids
     segments_updated = Signal(list) # Passes list of unassigned segments
+    state_reset = Signal() # Notifies view that state was reset (board/project change or re-import)
 
     def __init__(self, analyzer: BaseAIAnalyzer, boards_vm, knots_vm):
         super().__init__()
@@ -53,8 +72,39 @@ class AiAnalysisViewModel(QObject):
         self.knots_vm.knot_saved.connect(self._on_knot_saved_sync)
         self.knots_vm.knot_error.connect(self._on_knot_error_sync)
         self.knots_vm.validation_failed.connect(self._on_knot_error_sync)
+        
+        # Connect board selection changes to state reset
+        self.boards_vm.current_board_changed.connect(self.reset_state)
+        self.boards_vm.boards_changed.connect(self._on_boards_changed)
+        
         self._save_success = False
         self._worker = None
+
+    def reset_state(self, *args):
+        """Reset all AI analysis state when board/project changes."""
+        if self._worker is not None:
+            try:
+                self._worker.analysis_complete.disconnect()
+                self._worker.analysis_error.disconnect()
+            except Exception:
+                pass
+
+            self._worker.stop()
+            if not self._worker.wait(1000):
+                self._worker.terminate()
+                self._worker.wait(200)
+            self._worker = None
+
+        self.current_image_path = None
+        self.analysis_result = None
+        self.unassigned_segments = []
+        self.selected_segment_ids = []
+        self.state_reset.emit()
+
+    def _on_boards_changed(self, boards):
+        """Handle boards list update: if no current board, reset state."""
+        if not self._get_current_board():
+            self.reset_state()
 
     def _on_knot_saved_sync(self, msg):
         self._save_success = True
@@ -63,11 +113,54 @@ class AiAnalysisViewModel(QObject):
         self._save_success = False
 
     def load_image(self, image_path: str):
+        # Reset state for new image import
+        if self._worker is not None:
+            try:
+                self._worker.analysis_complete.disconnect()
+                self._worker.analysis_error.disconnect()
+            except Exception:
+                pass
+
+            self._worker.stop()
+            if not self._worker.wait(1000):
+                self._worker.terminate()
+                self._worker.wait(200)
+            self._worker = None
+
         self.current_image_path = image_path
-        # Reset state
         self.analysis_result = None
         self.unassigned_segments = []
         self.selected_segment_ids = []
+        self.selection_changed.emit(self.selected_segment_ids)
+        self.segments_updated.emit(self.unassigned_segments)
+
+    def cancel_analysis(self):
+        """Cancels an ongoing AI detection process cleanly without forcing C++ thread termination."""
+        if self._worker is not None:
+            try:
+                self._worker.analysis_complete.disconnect()
+                self._worker.analysis_error.disconnect()
+            except Exception:
+                pass
+
+            self._worker.stop()
+            if not self._worker.wait(1000):
+                self._worker.terminate()
+                self._worker.wait(200)
+            self._worker = None
+
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+
+        self.analysis_result = None
+        self.unassigned_segments = []
+        self.selected_segment_ids = []
+        self.selection_changed.emit(self.selected_segment_ids)
+        self.segments_updated.emit(self.unassigned_segments)
 
     def run_analysis(self):
         if not self.current_image_path:
@@ -88,13 +181,15 @@ class AiAnalysisViewModel(QObject):
 
         # Store board reference for post-processing in the main thread
         self._analysis_board = board
+        testpos = getattr(board, 'test_position', 0) or 0
 
         self._worker = AnalysisWorker(
             self.analyzer,
             self.current_image_path,
             board.length,
             board.base,
-            board.height
+            board.height,
+            test_position=testpos
         )
         self._worker.analysis_complete.connect(self._on_analysis_complete)
         self._worker.analysis_error.connect(self._on_analysis_error)
@@ -155,7 +250,51 @@ class AiAnalysisViewModel(QObject):
                     self.error_occurred.emit(f"You cannot select more than one segment on Face {seg.face_id}.")
                     return
             self.selected_segment_ids.append(segment_id)
+            
         self.selection_changed.emit(self.selected_segment_ids)
+        self._populate_vm_fields_from_selection()
+
+    def _populate_vm_fields_from_selection(self):
+        """Calculates knot coordinates for current selection and populates KnotsViewModel fields immediately."""
+        if not self.selected_segment_ids:
+            for side in range(1, 5):
+                setattr(self.knots_vm, f'side{side}_z1', None)
+                setattr(self.knots_vm, f'side{side}_z2', None)
+                setattr(self.knots_vm, f'side{side}_dmin', None)
+            self.knots_vm.x = None
+            self.knots_vm.comment = ""
+            self.knots_vm.knot_data_changed.emit()
+            return
+
+        selected_segs = [s for s in self.unassigned_segments if s.segment_id in self.selected_segment_ids]
+        knot_data = self._calculate_knot_data(selected_segs)
+        if not knot_data:
+            return
+
+        if not self.knots_vm.knot_editable:
+            self.knots_vm.handle_new_knot()
+
+        # Reintegrate default comment for knots generated from AI detection/segments
+        self.knots_vm.comment = " AI generated"
+
+        if 'x' in knot_data:
+            self.knots_vm.x = knot_data['x']
+
+        # Clear existing side fields first
+        for side in range(1, 5):
+            setattr(self.knots_vm, f'side{side}_z1', None)
+            setattr(self.knots_vm, f'side{side}_z2', None)
+            setattr(self.knots_vm, f'side{side}_dmin', None)
+
+        # Set calculated side fields
+        for side in range(1, 5):
+            prefix = f"side{side}"
+            if f"{prefix}_z1" in knot_data:
+                setattr(self.knots_vm, f'side{side}_z1', knot_data[f"{prefix}_z1"])
+                setattr(self.knots_vm, f'side{side}_z2', knot_data[f"{prefix}_z2"])
+                setattr(self.knots_vm, f'side{side}_dmin', knot_data[f"{prefix}_dmin"])
+
+        self.knots_vm.knot_data_changed.emit()
 
     def delete_segment(self, segment_id: str):
         self.unassigned_segments = [s for s in self.unassigned_segments if s.segment_id != segment_id]
@@ -213,7 +352,7 @@ class AiAnalysisViewModel(QObject):
         # Calculate center X of all selected segments
         min_x = min(p.x for s in selected_segs for p in s.polygon)
         max_x = max(p.x for s in selected_segs for p in s.polygon)
-        knot_x_mm = int(((min_x + max_x) / 2) / px_per_mm_x)
+        knot_x_mm = max(1, int(((min_x + max_x) / 2) / px_per_mm_x))
 
         knot_data = {'x': knot_x_mm}
 
@@ -260,124 +399,38 @@ class AiAnalysisViewModel(QObject):
             self.error_occurred.emit("No board selected.")
             return False
 
-        # Get the selected segments
-        selected_segs = [s for s in self.unassigned_segments if s.segment_id in self.selected_segment_ids]
-        
-        # 1. Calculate X
-        # Image width = board_length
-        px_per_mm_x = self.analysis_result.image_width / board.length if board.length > 0 else 1.0
-        
-        # Find the center X of the bounding box of all selected segments
-        min_x = min(p.x for s in selected_segs for p in s.polygon)
-        max_x = max(p.x for s in selected_segs for p in s.polygon)
-        center_x_px = (min_x + max_x) / 2
-        knot_x_mm = int(center_x_px / px_per_mm_x)
-
-        # 2. Prepare Knot Data Dictionary
-        knot_data = {
-            'x': knot_x_mm,
-            'comment': "AI Generated",
-        }
-        
+        # Apply single face data (pruned / pith) if provided
         if single_face_data:
-            knot_data['type'] = single_face_data.get('type')
-            if knot_data['type'] == 'pruned':
-                knot_data['pruned_z1'] = single_face_data.get('pruned_z1')
-                knot_data['pruned_y1'] = single_face_data.get('pruned_y1')
-                knot_data['pruned_z2'] = single_face_data.get('pruned_z2')
-                knot_data['pruned_y2'] = single_face_data.get('pruned_y2')
-            elif knot_data['type'] == 'pith':
-                knot_data['pith_z'] = single_face_data.get('pith_z')
-                knot_data['pith_y'] = single_face_data.get('pith_y')
+            k_type = single_face_data.get('type')
+            if k_type == 'pruned':
+                self.knots_vm.is_pruned_knot = True
+                self.knots_vm.pruned_z1 = single_face_data.get('pruned_z1')
+                self.knots_vm.pruned_y1 = single_face_data.get('pruned_y1')
+                self.knots_vm.pruned_z2 = single_face_data.get('pruned_z2')
+                self.knots_vm.pruned_y2 = single_face_data.get('pruned_y2')
+            elif k_type == 'pith':
+                self.knots_vm.is_pruned_knot = False
+                self.knots_vm.pith_z = single_face_data.get('pith_z')
+                self.knots_vm.pith_y = single_face_data.get('pith_y')
 
-        # 3. Calculate z1, z2, dmin for each face
-        # We assume faces 1, 3 correspond to the board's 'height' (edges) 
-        # and faces 2, 4 correspond to the board's 'base' (flats). 
-        # This mapping can be adjusted if the image layout is different.
-        for seg in selected_segs:
-            face_info = next((f for f in self.analysis_result.faces if f.face_id == seg.face_id), None)
-            if not face_info: continue
+        # Ensure comment field contains " AI generated" unless user entered a custom comment
+        if not self.knots_vm.comment or not str(self.knots_vm.comment).strip():
+            self.knots_vm.comment = " AI generated"
 
-            # Determine physical height of this face
-            is_height_face = seg.face_id in [1, 3]
-            physical_width_of_face = board.height if is_height_face else board.base
-            
-            face_px_height = face_info.max_y - face_info.min_y
-            px_per_mm_z = face_px_height / physical_width_of_face if physical_width_of_face > 0 else 1.0
+        self._save_success = False
 
-            # Find min_y and max_y relative to the face
-            seg_min_y = min(p.y for p in seg.polygon)
-            seg_max_y = max(p.y for p in seg.polygon)
-            
-            # Convert to Z (distance from the top edge of the face)
-            z1_mm = int((seg_min_y - face_info.min_y) / px_per_mm_z)
-            z2_mm = int((seg_max_y - face_info.min_y) / px_per_mm_z)
+        # Save directly via KnotsViewModel (uses current form field values as ground truth)
+        self.knots_vm.handle_save_knot()
 
-            # dmin calculation: Minimum Area Rectangle
-            import numpy as np
-            import cv2
-            
-            pts_mm = np.array([[p.x / px_per_mm_x, p.y / px_per_mm_z] for p in seg.polygon], dtype=np.float32)
-            if len(pts_mm) >= 3:
-                rect_mm = cv2.minAreaRect(pts_mm)
-                width_mm, height_mm = rect_mm[1]
-                dmin_mm = int(min(width_mm, height_mm))
-            else:
-                dmin_mm = 1
-
-            # Ensure we don't exceed the board limits logically
-            dmin_mm = max(1, dmin_mm) # At least 1mm
-
-            # Map to the corresponding side in the database (side1 to side4)
-            side_prefix = f"side{seg.face_id}"
-            knot_data[f"{side_prefix}_z1"] = z1_mm
-            knot_data[f"{side_prefix}_z2"] = z2_mm
-            knot_data[f"{side_prefix}_dmin"] = dmin_mm
-
-        # 4. Save using KnotsViewModel
-        return self._save_knot_to_vm(knot_data)
+        if self._save_success:
+            self.unassigned_segments = [s for s in self.unassigned_segments if s.segment_id not in self.selected_segment_ids]
+            self.selected_segment_ids = []
+            self.selection_changed.emit(self.selected_segment_ids)
+            self.segments_updated.emit(self.unassigned_segments)
+            return True
+        return False
 
     def _get_current_board(self):
         board_no = self.boards_vm.current_board_no
         if not board_no: return None
         return next((b for b in self.boards_vm._boards if str(b.board_no) == str(board_no)), None)
-
-    def _save_knot_to_vm(self, knot_data: dict) -> bool:
-        self._save_success = False
-        
-        # Map knot_data to knots_vm properties and trigger a save
-        self.knots_vm.handle_new_knot()
-        
-        self.knots_vm.x = knot_data.get('x', 0)
-        self.knots_vm.comment = knot_data.get('comment', "")
-        
-        # Reset specific fields
-        self.knots_vm.is_pruned_knot = False
-        self.knots_vm.pith_z = None
-        self.knots_vm.pith_y = None
-        
-        if knot_data.get('type') == 'pruned':
-            self.knots_vm.is_pruned_knot = True
-            setattr(self.knots_vm, 'pruned_z1', knot_data.get('pruned_z1'))
-            setattr(self.knots_vm, 'pruned_y1', knot_data.get('pruned_y1'))
-            setattr(self.knots_vm, 'pruned_z2', knot_data.get('pruned_z2'))
-            setattr(self.knots_vm, 'pruned_y2', knot_data.get('pruned_y2'))
-        elif knot_data.get('type') == 'pith':
-            self.knots_vm.pith_z = knot_data.get('pith_z')
-            self.knots_vm.pith_y = knot_data.get('pith_y')
-
-        # Apply sides data
-        for side in range(1, 5):
-            setattr(self.knots_vm, f"side{side}_z1", knot_data.get(f"side{side}_z1"))
-            setattr(self.knots_vm, f"side{side}_z2", knot_data.get(f"side{side}_z2"))
-            setattr(self.knots_vm, f"side{side}_dmin", knot_data.get(f"side{side}_dmin"))
-
-        # Save to database
-        self.knots_vm.handle_save_knot()
-        
-        if self._save_success:
-            self.unassigned_segments = [s for s in self.unassigned_segments if s.segment_id not in self.selected_segment_ids]
-            self.selected_segment_ids = []
-            self.selection_changed.emit(self.selected_segment_ids)
-            return True
-        return False

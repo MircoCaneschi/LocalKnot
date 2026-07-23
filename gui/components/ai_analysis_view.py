@@ -141,6 +141,25 @@ class LoadingOverlay(QWidget):
         layout.addSpacing(8)
         layout.addWidget(self.progress, 0, Qt.AlignmentFlag.AlignCenter)
 
+        self.btn_cancel = QPushButton("CANCEL DETECTION")
+        self.btn_cancel.setFixedWidth(180)
+        self.btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #f44336;
+                color: white;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #d32f2f;
+            }
+        """)
+        layout.addSpacing(15)
+        layout.addWidget(self.btn_cancel, 0, Qt.AlignmentFlag.AlignCenter)
+
         self.hide()
 
     def paintEvent(self, event):
@@ -202,6 +221,8 @@ class AiAnalysisView(QWidget):
         self.btn_group = QPushButton("GROUP KNOTS")
         self.btn_add = QPushButton("ADD SEGMENT")
         self.btn_remove = QPushButton("REMOVE SEGMENT")
+        self.btn_hide_segments = QPushButton("HIDE SEGMENTS")
+        self.hide_segments = False
         
         self.msg_label = QLabel("")
         self.msg_label.setWordWrap(True)
@@ -212,12 +233,14 @@ class AiAnalysisView(QWidget):
         self.btn_group.setEnabled(False)
         self.btn_add.setEnabled(False)
         self.btn_remove.setEnabled(False)
+        self.btn_hide_segments.setEnabled(False)
         
         left_panel.addWidget(self.btn_import)
         left_panel.addWidget(self.btn_start)
         left_panel.addWidget(self.btn_group)
         left_panel.addWidget(self.btn_add)
         left_panel.addWidget(self.btn_remove)
+        left_panel.addWidget(self.btn_hide_segments)
         left_panel.addWidget(self.msg_label)
         left_panel.addStretch()
         
@@ -244,6 +267,8 @@ class AiAnalysisView(QWidget):
         self.btn_group.clicked.connect(self._toggle_group_mode)
         self.btn_add.clicked.connect(self._toggle_add_mode)
         self.btn_remove.clicked.connect(self._toggle_remove_mode)
+        self.btn_hide_segments.clicked.connect(self._toggle_hide_segments)
+        self.loading_overlay.btn_cancel.clicked.connect(self._cancel_detection)
         
         # VM Signals
         self.view_model.analysis_started.connect(self._on_analysis_started)
@@ -251,10 +276,93 @@ class AiAnalysisView(QWidget):
         self.view_model.error_occurred.connect(self._on_error)
         self.view_model.segments_updated.connect(self._redraw_segments)
         self.view_model.selection_changed.connect(self._redraw_segments)
+        self.view_model.state_reset.connect(self._on_state_reset)
+
+    def _cancel_detection(self):
+        """Cancel ongoing AI analysis and restore pre-detection state."""
+        self.view_model.cancel_analysis()
+        self._hide_loading_overlay()
+        self.btn_start.setText("START DETECTION")
+        self.btn_start.setStyleSheet("")
+        self.btn_start.setEnabled(True)
+        self.btn_import.setEnabled(True)
+        self.btn_group.setEnabled(False)
+        self.btn_add.setEnabled(False)
+        self.btn_remove.setEnabled(False)
+        self.btn_hide_segments.setEnabled(False)
+        self.msg_label.setText("Detection cancelled. Ready to start detection.")
+        self.msg_label.setStyleSheet("color: black;")
+        self._redraw_segments()
+
+    def _toggle_hide_segments(self):
+        """Toggle showing/hiding of knot segments over raw board."""
+        self.hide_segments = not getattr(self, 'hide_segments', False)
+        if self.hide_segments:
+            self.btn_hide_segments.setText("SHOW SEGMENTS")
+            self.btn_hide_segments.setStyleSheet("background-color: #E65100; color: white; font-weight: bold;")
+        else:
+            self.btn_hide_segments.setText("HIDE SEGMENTS")
+            self.btn_hide_segments.setStyleSheet("")
+        self._redraw_segments()
         
+    def _on_state_reset(self):
+        """Reset UI canvas, interaction modes, and buttons when board/project changes or state is cleared."""
+        self.is_grouping_mode = False
+        self.is_add_mode = False
+        self.is_remove_mode = False
+        self.hide_segments = False
+        self.btn_hide_segments.setText("HIDE SEGMENTS")
+        self.btn_hide_segments.setStyleSheet("")
+        self.btn_start.setText("START DETECTION")
+        self.btn_start.setStyleSheet("")
+        self.drawing_points = []
+        self.drawing_poly_item = None
+        self.drawn_items = []
+        
+        self.scene.clear()
+        
+        board = self.view_model._get_current_board()
+        if board:
+            self.btn_import.setEnabled(True)
+            self.btn_start.setEnabled(False)
+            self.btn_group.setEnabled(False)
+            self.btn_add.setEnabled(False)
+            self.btn_remove.setEnabled(False)
+            self.btn_hide_segments.setEnabled(False)
+            self.msg_label.setText(f"Ready to import image for Board {board.board_no}.")
+            self.msg_label.setStyleSheet("color: black;")
+        else:
+            self.btn_import.setEnabled(False)
+            self.btn_start.setEnabled(False)
+            self.btn_group.setEnabled(False)
+            self.btn_add.setEnabled(False)
+            self.btn_remove.setEnabled(False)
+            self.btn_hide_segments.setEnabled(False)
+            self.msg_label.setText("No board selected. Please select a board from the top Data Panel.")
+            self.msg_label.setStyleSheet("color: #777;")
+
     def _import_image(self):
+        # Validate that a board is selected first
+        board = self.view_model._get_current_board()
+        if not board:
+            QMessageBox.warning(self, "Warning", "Please select a board from the top Data Panel first.")
+            return
+
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Board Image", "", "Images (*.png *.jpg *.jpeg *.bmp)")
         if file_path:
+            # Reset modes and canvas before loading new image
+            self.is_grouping_mode = False
+            self.is_add_mode = False
+            self.is_remove_mode = False
+            self.btn_group.setText("GROUP KNOTS")
+            self.btn_group.setStyleSheet("")
+            self.btn_add.setText("ADD SEGMENT")
+            self.btn_add.setStyleSheet("")
+            self.btn_remove.setText("REMOVE SEGMENT")
+            self.btn_remove.setStyleSheet("")
+            self.btn_start.setText("START DETECTION")
+            self.btn_start.setStyleSheet("")
+            
             self.view_model.load_image(file_path)
             self.msg_label.setText("Image loaded. Ready for detection.")
             self.msg_label.setStyleSheet("color: black;")
@@ -265,18 +373,33 @@ class AiAnalysisView(QWidget):
             self._draw_image(file_path)
 
     def _start_detection(self):
+        # If worker is currently running, clicking button cancels detection
+        if self.view_model._worker is not None and self.view_model._worker.isRunning():
+            self._cancel_detection()
+            return
+
+        board = self.view_model._get_current_board()
+        if not board:
+            QMessageBox.warning(self, "Warning", "Please select a board from the top Data Panel first.")
+            return
         self.view_model.run_analysis()
 
     def _on_analysis_started(self):
         self.msg_label.setText("Analyzing image...")
         self.msg_label.setStyleSheet("color: blue;")
-        self.btn_start.setEnabled(False)
+        self.btn_start.setText("STOP DETECTION")
+        self.btn_start.setStyleSheet("background-color: #f44336; color: white; font-weight: bold;")
+        self.btn_start.setEnabled(True)
         self.btn_import.setEnabled(False)
         self._show_loading_overlay()
 
     def _on_analysis_finished(self, result):
         self._hide_loading_overlay()
-        if self.view_model.unassigned_segments:
+        self.btn_start.setText("START DETECTION")
+        self.btn_start.setStyleSheet("")
+        has_segs = bool(self.view_model.unassigned_segments)
+        self.btn_hide_segments.setEnabled(has_segs)
+        if has_segs:
             self.msg_label.setText("Please, group the knots")
             self.msg_label.setStyleSheet("color: green; font-weight: bold;")
             self.btn_group.setEnabled(True)
@@ -293,6 +416,8 @@ class AiAnalysisView(QWidget):
 
     def _on_error(self, err_msg):
         self._hide_loading_overlay()
+        self.btn_start.setText("START DETECTION")
+        self.btn_start.setStyleSheet("")
         self.msg_label.setText(f"Error: {err_msg}")
         self.msg_label.setStyleSheet("color: red; font-weight: bold;")
         self.btn_start.setEnabled(True)
@@ -367,156 +492,123 @@ class AiAnalysisView(QWidget):
         if len(self.drawing_points) < 3:
             return
         from core.ai.ai_models import Point2D
-
-        points_list = [Point2D(p.x() / self.scale_x, p.y() / self.scale_y) for p in self.drawing_points]
+        poly_points = [Point2D(x=pt.x(), y=pt.y()) for pt in self.drawing_points]
+        cy_px = float(np.mean([pt.y() for pt in self.drawing_points]))
         
-        # Automatically infer face_id based on average Y coordinate
-        cy = float(np.mean([p.y for p in points_list]))
-        face_id = self.view_model.auto_detect_face(cy)
-
-        self.view_model.add_manual_segment(points_list, face_id)
-
+        assigned_face = self.view_model.auto_detect_face(cy_px)
+        
+        self.view_model.add_manual_segment(poly_points, face_id=assigned_face)
+        
         self.drawing_points = []
         if self.drawing_poly_item:
             self.scene.removeItem(self.drawing_poly_item)
             self.drawing_poly_item = None
+            
+        self.btn_add.setText("ADD SEGMENT")
+        self.btn_add.setStyleSheet("")
+        self.is_add_mode = False
+        self.msg_label.setText("Manual segment added.")
+        self.msg_label.setStyleSheet("color: green;")
 
     def _toggle_add_mode(self):
         if not self.is_add_mode:
             self.is_add_mode = True
             self.btn_add.setText("FINISH ADDING")
-            self.btn_add.setStyleSheet("background-color: #FF9800;")
-            self.btn_group.setEnabled(False)
-            self.btn_remove.setEnabled(False)
-            self.btn_start.setEnabled(False)
-            self.btn_import.setEnabled(False)
-            self.drawing_points = []
-            self.msg_label.setText("ADD MODE:\n- Left click to add polygon points.\n- Click FINISH ADDING or Right click to save.")
-        else:
-            # If user has drawn a polygon before clicking FINISH ADDING, finalize it
-            if len(self.drawing_points) >= 3:
-                self._finalize_manual_segment()
-                
-            self.is_add_mode = False
-            self.btn_add.setText("ADD SEGMENT")
-            self.btn_add.setStyleSheet("")
-            self.btn_group.setEnabled(len(self.view_model.unassigned_segments) > 0)
-            self.btn_remove.setEnabled(len(self.view_model.unassigned_segments) > 0)
-            self.btn_start.setEnabled(True)
-            self.btn_import.setEnabled(True)
-            self.drawing_points = []
-            if self.drawing_poly_item:
-                self.scene.removeItem(self.drawing_poly_item)
-                self.drawing_poly_item = None
+            self.btn_add.setStyleSheet("background-color: #4CAF50;") # Green button
+            self.msg_label.setText("Click points on canvas to draw segment. Click FINISH ADDING when done.")
+            self.msg_label.setStyleSheet("color: black;")
             
-            if self.view_model.unassigned_segments:
-                self.msg_label.setText("Please, group the knots")
-                self.msg_label.setStyleSheet("color: green; font-weight: bold;")
-            else:
-                self.msg_label.setText("No segments left.")
+            # Disable other modes
+            self.is_grouping_mode = False
+            self.btn_group.setText("GROUP KNOTS")
+            self.btn_group.setStyleSheet("")
+            self.is_remove_mode = False
+            self.btn_remove.setText("REMOVE SEGMENT")
+            self.btn_remove.setStyleSheet("")
+        else:
+            self._finalize_manual_segment()
 
     def _toggle_remove_mode(self):
         if not self.is_remove_mode:
             self.is_remove_mode = True
             self.btn_remove.setText("FINISH REMOVING")
-            self.btn_remove.setStyleSheet("background-color: #FF9800;") # Orange
-            self.btn_group.setEnabled(False)
-            self.btn_add.setEnabled(False)
-            self.btn_start.setEnabled(False)
-            self.btn_import.setEnabled(False)
-            self.msg_label.setText("REMOVE MODE:\n- Left click a segment to delete it.")
+            self.btn_remove.setStyleSheet("background-color: #f44336;") # Red button
+            self.msg_label.setText("Click segments to delete them. Press FINISH REMOVING when done.")
+            self.msg_label.setStyleSheet("color: black;")
+            
+            # Disable other modes
+            self.is_add_mode = False
+            self.btn_add.setText("ADD SEGMENT")
+            self.btn_add.setStyleSheet("")
+            self.is_grouping_mode = False
+            self.btn_group.setText("GROUP KNOTS")
+            self.btn_group.setStyleSheet("")
         else:
             self.is_remove_mode = False
             self.btn_remove.setText("REMOVE SEGMENT")
             self.btn_remove.setStyleSheet("")
-            self.btn_group.setEnabled(len(self.view_model.unassigned_segments) > 0)
-            self.btn_add.setEnabled(True)
-            self.btn_start.setEnabled(True)
-            self.btn_import.setEnabled(True)
             if self.view_model.unassigned_segments:
                 self.msg_label.setText("Please, group the knots")
                 self.msg_label.setStyleSheet("color: green; font-weight: bold;")
             else:
-                self.msg_label.setText("No segments left.")
+                self.msg_label.setText("No segments remaining.")
+                self.msg_label.setStyleSheet("color: black;")
         
-    def _draw_image(self, path):
+    def _draw_image(self, image_path: str):
+        pixmap = QPixmap(image_path)
+        if pixmap.isNull():
+            return
+            
+        # Safely reset canvas state
+        self.drawn_items = []
+        self.drawing_poly_item = None
         self.scene.clear()
         
-        # Load and crop non-wood grey bottom strip upon loading
-        img_bgr = cv2.imread(path)
+        # Crop out bottom non-wood grey calibration strip if present
+        img_bgr = cv2.imread(image_path)
         if img_bgr is not None:
             img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-            height, width = img_rgb.shape[:2]
-            
-            r = img_rgb[:, :, 0].astype(np.float32)
-            g = img_rgb[:, :, 1].astype(np.float32)
-            b = img_rgb[:, :, 2].astype(np.float32)
-            rb_diff_row = np.mean(r - b, axis=1)
-            
-            hsv = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2HSV)
-            sat_row = np.mean(hsv[:, :, 1], axis=1)
-            val_row = np.mean(hsv[:, :, 2], axis=1)
-            
-            is_wood_row = (rb_diff_row > 14.0) & (sat_row > 20.0) & (~((val_row > 190) & (sat_row < 35)))
-            
-            bottom_y = height
-            for y in range(height - 1, int(height * 0.5), -1):
-                if is_wood_row[y]:
-                    bottom_y = y + 1
-                    break
-                    
-            top_y = 0
-            for y in range(0, int(height * 0.5)):
-                if is_wood_row[y]:
-                    top_y = y
-                    break
-                    
-            wood_bgr = img_bgr[top_y:bottom_y, :]
-            wood_rgb = cv2.cvtColor(wood_bgr, cv2.COLOR_BGR2RGB)
-            
-            h, w, ch = wood_rgb.shape
-            bytes_per_line = ch * w
-            qimg = QImage(wood_rgb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-            pixmap = QPixmap.fromImage(qimg)
-        else:
-            pixmap = QPixmap(path)
+            top_y, bottom_y = self.view_model.analyzer._detect_wood_crop_bounds(img_rgb)
+            if bottom_y < img_bgr.shape[0]:
+                wood_bgr = img_bgr[top_y:bottom_y, :]
+                wood_rgb = cv2.cvtColor(wood_bgr, cv2.COLOR_BGR2RGB)
+                h, w, ch = wood_rgb.shape
+                bytes_per_line = ch * w
+                qimg = QImage(wood_rgb.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+                pixmap = QPixmap.fromImage(qimg)
         
         self.scale_x = 1.0
         self.scale_y = 1.0
-        
-        # Rescale based on physical board dimensions
-        board = self.view_model._get_current_board()
-        if board:
-            try:
-                target_w = int(board.length)
-                target_h = int((board.height * 2) + (board.base * 2))
-                orig_w = pixmap.width()
-                orig_h = pixmap.height()
-                if target_w > 0 and target_h > 0 and orig_w > 0 and orig_h > 0:
-                    self.scale_x = target_w / orig_w
-                    self.scale_y = target_h / orig_h
-                    pixmap = pixmap.scaled(target_w, target_h, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
-            except Exception:
-                pass
                 
         self.scene.addPixmap(pixmap)
+        self.scene.setSceneRect(self.scene.itemsBoundingRect())
         self.view.fitInView(self.scene.sceneRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
     def _redraw_segments(self, unused=None):
         if not self.view_model.current_image_path:
             return
+
+        has_segments = bool(self.view_model.unassigned_segments)
+        self.btn_hide_segments.setEnabled(has_segments)
+        if not has_segments:
+            self.hide_segments = False
+            self.btn_hide_segments.setText("HIDE SEGMENTS")
+            self.btn_hide_segments.setStyleSheet("")
             
-        # Pulisci solo gli elementi disegnati dinamicamente per non resettare lo zoom!
+        # Safely remove previously drawn dynamic items without crashing if scene was cleared
         if hasattr(self, 'drawn_items'):
             for item in self.drawn_items:
-                self.scene.removeItem(item)
+                try:
+                    self.scene.removeItem(item)
+                except Exception:
+                    pass
         self.drawn_items = []
         
         # Draw faces separators
         if self.view_model.analysis_result:
             for face in self.view_model.analysis_result.faces:
-                scaled_y = face.max_y * self.scale_y
-                scaled_max_x = self.view_model.analysis_result.image_width * self.scale_x
+                scaled_y = face.max_y
+                scaled_max_x = self.view_model.analysis_result.image_width
                 line = self.scene.addLine(0, scaled_y, scaled_max_x, scaled_y, QPen(QColor(0, 0, 255, 150), 2))
                 self.drawn_items.append(line)
 
@@ -526,29 +618,34 @@ class AiAnalysisView(QWidget):
                 testpos = board.test_position
                 h = board.height
                 
+                px_per_mm_x = self.view_model.analysis_result.image_width / float(board.length) if board.length > 0 else 1.0
+                testpos_px = testpos * px_per_mm_x
+                h_px = 3 * h * px_per_mm_x
+
                 line_y1 = 0
                 line_y2 = self.scene.sceneRect().height()
                 
                 testpos_pen = QPen(QColor(50, 50, 200, 200), 2, Qt.PenStyle.DashLine)
                 bound_pen = QPen(QColor(200, 50, 50, 200), 2, Qt.PenStyle.DashLine)
                 
-                l1 = self.scene.addLine(testpos, line_y1, testpos, line_y2, testpos_pen)
-                l2 = self.scene.addLine(testpos - 3*h, line_y1, testpos - 3*h, line_y2, bound_pen)
-                l3 = self.scene.addLine(testpos + 3*h, line_y1, testpos + 3*h, line_y2, bound_pen)
+                l1 = self.scene.addLine(testpos_px, line_y1, testpos_px, line_y2, testpos_pen)
+                l2 = self.scene.addLine(testpos_px - h_px, line_y1, testpos_px - h_px, line_y2, bound_pen)
+                l3 = self.scene.addLine(testpos_px + h_px, line_y1, testpos_px + h_px, line_y2, bound_pen)
                 self.drawn_items.extend([l1, l2, l3])
 
-        # Draw segments (works for both AI-detected and manually added segments)
-        for seg in self.view_model.unassigned_segments:
-            is_selected = seg.segment_id in self.view_model.selected_segment_ids
-            
-            poly = QPolygonF([QPointF(p.x * self.scale_x, p.y * self.scale_y) for p in seg.polygon])
-            
-            brush_color = QColor(0, 255, 0, 100) if is_selected else QColor(255, 255, 0, 100)
-            pen_color = QColor(0, 255, 0, 255) if is_selected else QColor(255, 255, 0, 255)
-            
-            poly_item = self.scene.addPolygon(poly, QPen(pen_color, 2), QBrush(brush_color))
-            poly_item.setData(0, seg.segment_id)
-            self.drawn_items.append(poly_item)
+        # Draw segments (only if not hidden by user toggle)
+        if not getattr(self, 'hide_segments', False):
+            for seg in self.view_model.unassigned_segments:
+                is_selected = seg.segment_id in self.view_model.selected_segment_ids
+                
+                poly = QPolygonF([QPointF(p.x, p.y) for p in seg.polygon])
+                
+                brush_color = QColor(0, 255, 0, 100) if is_selected else QColor(255, 255, 0, 100)
+                pen_color = QColor(0, 255, 0, 255) if is_selected else QColor(255, 255, 0, 255)
+                
+                poly_item = self.scene.addPolygon(poly, QPen(pen_color, 2), QBrush(brush_color))
+                poly_item.setData(0, seg.segment_id)
+                self.drawn_items.append(poly_item)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

@@ -411,9 +411,20 @@ class KnotsViewModel(QObject):
             val = None if value == "" or value is None else int(value)
             if self._side4_dmin != val:
                 self._side4_dmin = val
-                self._mark_dirty()
         except (ValueError, TypeError):
             pass
+
+    @Property(bool, notify=knot_editable_changed)
+    def knot_editable(self) -> bool:
+        """Get knot editable state."""
+        return self._knot_editable
+
+    @knot_editable.setter
+    def knot_editable(self, value: bool):
+        """Set knot editable state."""
+        if self._knot_editable != value:
+            self._knot_editable = value
+            self.knot_editable_changed.emit(value)
 
     # ==================== SLOTS ====================
 
