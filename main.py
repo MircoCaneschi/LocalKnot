@@ -33,12 +33,19 @@ def main():
     """Application entry point - MVVM Architecture."""
     
     if os.name == 'nt':
-        myappid = 'localknot.demo.version.1'
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        myappid = 'LocalKnot.WoodKnotAnalyzer.App.1'
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        except Exception:
+            pass
 
     app = QApplication(sys.argv)
     icon_path = os.path.join(project_root, "imgs", "logo_DEMO.ico")
-    app.setWindowIcon(QIcon(icon_path))
+    if not os.path.exists(icon_path):
+        icon_path = os.path.join(project_root, "imgs", "LOGPCNR.svg")
+        
+    app_icon = QIcon(icon_path)
+    app.setWindowIcon(app_icon)
 
     # Apply global stylesheet directly from the filesystem
     qss_file_path = os.path.join(project_root, "styles", "style.qss")
@@ -56,6 +63,7 @@ def main():
 
     # Create and show main window
     window = MainWindow()
+    window.setWindowIcon(app_icon)
     window.show()
 
     sys.exit(app.exec())
